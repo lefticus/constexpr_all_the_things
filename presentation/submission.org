@@ -1,0 +1,14 @@
+constexpr ALL the things!
+
+constexpr: in C++11, a curiosity; in C++14, viable for more uses; now with added
+power, in C++17 will it become an important tool in the programmer's toolkit?
+
+In this talk we will examine the possibilities and power of constexpr and
+explore what can (and what should) be done at compile-time with C++17. We'll
+present techniques for building constexpr data structures and algorithms, and
+for effectively meshing compile-time and runtime computation with constexpr API
+constructs. We'll also consider the opportunities for judicious use of user
+defined literals for expressive compile-time abstractions.
+
+Compile-time computation offers perhaps the ultimate zero-cost abstraction, and
+this talk attempts to answer the question of how C++17 delivers on the promise.
