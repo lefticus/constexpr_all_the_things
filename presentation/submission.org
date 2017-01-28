@@ -1,4 +1,57 @@
+For submission: http://cppnow.org/submission/
+
+* Speaker bios
+
+** Jason Turner
+jason@emptycrate.com
+
+Jason is a C++ developer, trainer and speaker; host of C++Weekly
+https://www.youtube.com/c/JasonTurner-lefticus; co-host of CppCast
+http://cppcast.com; co-creator and maintainer of the embedded scripting language
+for C++, ChaiScript http://chaiscript.com; and author and curator of the
+forkable coding standards document http://cppbestpractices.com.
+
+Jason is the presenter of several previous C++Now and CppCon talks including
+CppCon 2016's plenary session, "Rich Code for Tiny Computers: a Simple C64 Game
+in C++17".
+
+** Ben Deane
+bdeane@blizzard.com
+
+Ben has been writing games for over 20 years, and in C++ for most of that. He is
+currently a Principal Engineer at Blizzard Entertainment where he works on the
+Battle.net team. He's always looking for useful new techniques in C++, and he
+likes functional programming.
+
+Ben is the presenter of several previous C++Now and CppCon talks, most recently
+"Using Types Effectively" at CppCon 2016.
+
+* Title
+
 constexpr ALL the things!
+
+* Tags
+
+constexpr, zero-cost abstractions, compile-time computation, C++17, ?
+
+* Session type
+
+Lecture/Tutorial?
+
+* Session length
+
+Preferred: 90 mins
+Min/Max: 90 mins?
+
+* Session level
+
+Intermediate/Advanced?
+
+* Audience description
+
+Library authors, application developers, ?
+
+* Abstract
 
 constexpr: in C++11, a curiosity; in C++14, viable for more uses; now with added
 power, in C++17 will it become an important tool in the programmer's toolkit?
@@ -12,3 +65,31 @@ defined literals for expressive compile-time abstractions.
 
 Compile-time computation offers perhaps the ultimate zero-cost abstraction, and
 this talk attempts to answer the question of how C++17 delivers on the promise.
+
+* Outline
+
+** Building data structures
+ - Strings
+ - Pairs
+ - Vectors
+ - Maps
+ - Standard lib possibilities & current shortcomings
+ - Lambdas?
+ - Cost analysis of building structures at compile time
+
+** Algorithms
+ - Non-mutating
+ - Mutating
+ - Other?
+ - Standard lib possibilities & current shortcomings
+ - More lambdas?
+ - Algorithmic complexity at compile time
+
+** Literals
+ - Parsing techniques
+ - Tuple & variant possiblities
+ - (In development)
+
+** Mixing compile-time and runtime
+ - The limits of constexpr performance
+ - constexpr detection and SFINAE techniques
