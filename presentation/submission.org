@@ -32,24 +32,24 @@ constexpr ALL the things!
 
 * Tags
 
-constexpr, zero-cost abstractions, compile-time computation, C++17, ?
+constexpr, zero-cost abstractions, compile-time computation, C++17, performance
 
 * Session type
 
-Lecture/Tutorial?
+Tutorial
 
 * Session length
 
 Preferred: 90 mins
-Min/Max: 90 mins?
+Min/Max: 90 mins
 
 * Session level
 
-Intermediate/Advanced?
+Intermediate/Advanced
 
 * Audience description
 
-Library authors, application developers, ?
+Library authors, application developers
 
 * Abstract
 
@@ -65,6 +65,12 @@ defined literals for expressive compile-time abstractions.
 
 Compile-time computation offers perhaps the ultimate zero-cost abstraction, and
 this talk attempts to answer the question of how C++17 delivers on the promise.
+
+
+* Session Material
+
+Source Code
+
 
 * Outline
 
@@ -93,3 +99,11 @@ this talk attempts to answer the question of how C++17 delivers on the promise.
 ** Mixing compile-time and runtime
  - The limits of constexpr performance
  - constexpr detection and SFINAE techniques
+
+
+* Video URLs
+
+Ben Deane - Using Types Effectively CppCon2016 - https://www.youtube.com/watch?v=ojZbFIQSdl8
+Jason Turner - Rich Code For Tiny Computer CppCon2016 - https://www.youtube.com/watch?v=zBkNBP00wJE
+
+
