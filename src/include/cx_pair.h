@@ -1,7 +1,7 @@
 #pragma once
 
 // necessary because std::pair seems to be disabling the move assignment for
-// some unclear reason
+// some unclear reason. It's not clear if this is a bug in the gcc impl
 
 namespace cx
 {

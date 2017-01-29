@@ -14,11 +14,14 @@ namespace cx
     constexpr auto begin() const { return m_data.begin(); }
     constexpr auto begin() { return m_data.begin(); }
 
+    // We would have prefered to use `std::next`, however it does not seem
+    // to be enabled for constexpr use for std::array in this version
+    // of gcc. TODO: reevaluate this
     constexpr auto end() const { return m_data.begin() + m_size; }
     constexpr auto end() { return m_data.begin() + m_size; }
 
     constexpr auto cbegin() const { return m_data.begin(); }
-    constexpr auto cend() const { m_data.begin() + m_size; }
+    constexpr auto cend() const { return m_data.begin() + m_size; }
 
     constexpr const Value &operator[](const std::size_t t_pos) const {
       return m_data[t_pos];
@@ -29,6 +32,8 @@ namespace cx
 
     constexpr Value &at(const std::size_t t_pos) {
       if (t_pos >= m_size) {
+        // This is allowed in constexpr context, but if the constexpr evaluation
+        // hits this exception the compile would fail
         throw std::range_error("Index past end of vector");
       } else {
         return m_data[t_pos];
@@ -51,3 +56,4 @@ namespace cx
     std::size_t m_size{0};
   };
 }
+

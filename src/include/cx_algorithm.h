@@ -4,6 +4,8 @@
 
 namespace cx
 {
+  // Necessary because C++17 does not contain a constexpr version of find_if
+  // probably not for any technical reason
   template <class InputIt, class UnaryPredicate>
   constexpr InputIt find_if(InputIt first, InputIt last, UnaryPredicate p)
   {
