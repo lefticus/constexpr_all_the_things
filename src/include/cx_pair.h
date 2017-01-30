@@ -13,4 +13,10 @@ namespace cx
     First first;
     Second second;
   };
+
+  template <typename First, typename Second>
+  constexpr auto make_pair(First f, Second s)
+  {
+    return pair<First, Second>{f, s};
+  }
 }
