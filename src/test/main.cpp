@@ -10,7 +10,8 @@
 
 constexpr auto get_json_value()
 {
-  cx::JSON_Value<> j;
+  // we can elide the <> in C++17 with class template type deduction
+  cx::JSON_Value j{};
   j["a"].to_Number() = 15;
   j["b"].to_String() = "Hello World";
   j["d"].to_Array();
