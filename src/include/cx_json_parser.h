@@ -169,6 +169,23 @@ namespace JSON
            };
   }
 
+  // apply many1 instances of a parser, with another parser interleaved.
+  // accumulate the results with the given function.
+  template <typename P1, typename P2, typename F>
+  constexpr auto separated_by(P1&& p1, P2&& p2, F&& f)
+  {
+    using T = parse_t<P1>;
+    return [p1 = std::forward<P1>(p1), p2 = std::forward<P2>(p2),
+            f = std::forward<F>(f)] (
+                parse_input_t s) -> parse_result_t<T> {
+             const auto r = p1(s);
+             if (!r) return std::nullopt;
+             const auto p = p2 < p1;
+             return parse_result_t<T>(
+                 detail::accumulate_parse(r->second, p, r->first, f));
+           };
+  }
+
   //----------------------------------------------------------------------------
   // parsers for various types
 
@@ -408,6 +425,17 @@ namespace JSON
            });
     const auto p = quote_parser < str_parser > quote_parser;
     return p(s);
+  }
+
+  // parse an array sum
+  constexpr auto parse_array_sum(parse_input_t s)
+  {
+    constexpr auto array_parser =
+      make_char_parser('[') <
+      separated_by(int1_parser(), make_char_parser(','),
+                   [] (int x, const auto& y) { return x + y.first; })
+      > make_char_parser(']');
+    return array_parser(s);
   }
 
 }

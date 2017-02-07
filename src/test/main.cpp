@@ -104,7 +104,15 @@ int main(int, char *[])
       constexpr auto number_val = JSON::parse_number("456.123e-1"sv);
       static_assert(number_val && number_val->first == 456.123e-1);
     }
-}
+  }
+
+  {
+    // sum array of ints
+    {
+      constexpr auto sum_val = JSON::parse_array_sum("[1,2,3]"sv);
+      static_assert(sum_val && sum_val->first == 6);
+    }
+  }
 
   return 0;
 }
