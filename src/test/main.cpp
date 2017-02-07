@@ -23,24 +23,88 @@ constexpr auto get_json_value()
 
 int main(int, char *[])
 {
-  constexpr auto json_value = get_json_value();
-  static_assert(json_value["c"]["a"]["d"][0].to_Number() == 5.2);
+  // constexpr auto json_value = get_json_value();
+  // static_assert(json_value["c"]["a"]["d"][0].to_Number() == 5.2);
 
   using namespace std::literals;
-  constexpr auto true_val = JSON::parse_true("\"true\""sv);
-  static_assert(true_val && true_val->first);
+  {
+    // test true, false and null literals
+    constexpr auto true_val = JSON::parse_true("\"true\""sv);
+    static_assert(true_val && true_val->first);
 
-  constexpr auto false_val = JSON::parse_false("\"false\""sv);
-  static_assert(false_val && !false_val->first);
+    constexpr auto false_val = JSON::parse_false("\"false\""sv);
+    static_assert(false_val && !false_val->first);
 
-  constexpr auto null_val = JSON::parse_null("\"null\""sv);
-  static_assert(null_val);
+    constexpr auto null_val = JSON::parse_null("\"null\""sv);
+    static_assert(null_val);
+  }
 
-  constexpr auto int_val = JSON::parse_int("12345"sv);
-  static_assert(int_val && int_val->first == 12345);
+  {
+    // test strings (unicode chars unsupported as yet)
+    constexpr auto char_val = JSON::string_char_parser()("t"sv);
+    static_assert(char_val && char_val->first == 't');
+
+    constexpr auto echar_val = JSON::string_char_parser()("\t"sv);
+    static_assert(echar_val && echar_val->first == '\t');
+
+    {
+      constexpr auto str_val = JSON::parse_string(R"("")"sv);
+      static_assert(str_val && str_val->first.empty());
+    }
+
+    {
+      // the implementation of operator==(string_view, string_view) isn't
+      // constexpr yet, so we'll use a homegrown constexpr equal
+      constexpr auto str_val = JSON::parse_string(R"("hello")"sv);
+      constexpr auto expected_str = "hello"sv;
+      static_assert(str_val &&
+                    cx::equal(str_val->first.cbegin(), str_val->first.cend(),
+                              expected_str.cbegin(), expected_str.cend()));
+    }
+  }
+
+  {
+    // test numbers
+    {
+      constexpr auto number_val = JSON::parse_number("0"sv);
+      static_assert(number_val && number_val->first == 0);
+    }
+
+    {
+      constexpr auto number_val = JSON::parse_number("123"sv);
+      static_assert(number_val && number_val->first == 123.0);
+    }
+
+    {
+      constexpr auto number_val = JSON::parse_number("-123"sv);
+      static_assert(number_val && number_val->first == -123.0);
+    }
+
+    {
+      constexpr auto number_val = JSON::parse_number(".123"sv);
+      static_assert(!number_val);
+    }
+
+    {
+      constexpr auto number_val = JSON::parse_number("0.123"sv);
+      static_assert(number_val && number_val->first == 0.123);
+    }
+
+    {
+      constexpr auto number_val = JSON::parse_number("456.123"sv);
+      static_assert(number_val && number_val->first == 456.123);
+    }
+
+    {
+      constexpr auto number_val = JSON::parse_number("456.123e1"sv);
+      static_assert(number_val && number_val->first == 456.123e1);
+    }
+
+    {
+      constexpr auto number_val = JSON::parse_number("456.123e-1"sv);
+      static_assert(number_val && number_val->first == 456.123e-1);
+    }
+}
 
   return 0;
 }
-
-
-

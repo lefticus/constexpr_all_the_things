@@ -12,6 +12,7 @@
 
 namespace JSON
 {
+  //----------------------------------------------------------------------------
   // A parser for T is a callable thing that takes a "string" and returns
   // (optionally) an T plus the "leftover string".
   using parse_input_t = std::string_view;
@@ -26,87 +27,153 @@ namespace JSON
   template <typename P>
   using parse_t = typename pair_parse_t<P>::first_type;
 
-  template <typename T>
-  struct Parser
-  {
-    using input_t = std::string_view;
-    using parsed_t = T;
-    using parsed_pair_t = cx::pair<T, std::string_view>;
-    using result_t = cx::optional<parsed_pair_t>;
-  };
+  //----------------------------------------------------------------------------
+  // parsers as monads
 
-  // fmap a function into a parser
+  // fmap a function into a parser. F :: parse_t<P> -> a
   template <typename F, typename P>
-  constexpr auto fmap(F f, P p)
+  constexpr auto fmap(F&& f, P&& p)
   {
     using R = parse_result_t<std::result_of_t<F(parse_t<P>)>>;
-    return [=] (parse_input_t i) -> R {
+    return [f = std::forward<F>(f),
+            p = std::forward<P>(p)] (parse_input_t i) -> R {
              const auto r = p(i);
              if (!r) return std::nullopt;
              return R(cx::make_pair(f(r->first), r->second));
            };
   }
 
-  // sequence two parsers together, returning the either the first or second
-  // thing parsed (both must succeed)
-  namespace detail
+  // bind a function into a parser. F :: (parse_t<P>, parse_input_t) -> a
+  template <typename P, typename F>
+  constexpr auto bind(P&& p, F&& f)
   {
-    template <std::size_t N, typename P1, typename P2>
-    struct sequence_parser {};
-
-    // sequence_parser<0> returns the first result
-    template <typename P1, typename P2>
-    struct sequence_parser<0, P1, P2> {
-      constexpr auto operator()(P1 p1, P2 p2)
-      {
-        return [=] (parse_input_t i) -> opt_pair_parse_t<P1> {
-          const auto r1 = p1(i);
-          if (!r1) return std::nullopt;
-          const auto r2 = p2(r1->second);
-          if (!r2) return std::nullopt;
-          return r1;
-        };
-      }
-    };
-
-    // sequence_parser<1> returns the second result
-    template <typename P1, typename P2>
-    struct sequence_parser<1, P1, P2> {
-      constexpr auto operator()(P1 p1, P2 p2)
-      {
-        return [=] (parse_input_t i) -> opt_pair_parse_t<P2> {
-          const auto r1 = p1(i);
-          if (!r1) return std::nullopt;
-          return p2(r1->second);
-        };
-      }
-    };
-
-    template <std::size_t N, typename P1, typename P2>
-    constexpr auto seq_parser(P1&& p1, P2&& p2) {
-      return sequence_parser<N, P1, P2>{}(std::forward<P1>(p1),
-                                          std::forward<P2>(p2));
-    }
+    using R = std::result_of_t<F(parse_t<P>, parse_input_t)>;
+    return [=] (parse_input_t i) -> R {
+             const auto r = p(i);
+             if (!r) return std::nullopt;
+             return f(r->first, r->second);
+           };
   }
 
-  // For convenience, overload < and > to mean sequencing parsers
+  //----------------------------------------------------------------------------
+  // parser combinators
+
+  // alternation: try the first parser, and if it fails, do the second. They
+  // must both return the same type.
+  template <typename P1, typename P2,
+            typename = std::enable_if_t<std::is_same_v<parse_t<P1>, parse_t<P2>>>>
+  constexpr auto operator|(P1&& p1, P2&& p2) {
+    return [=] (parse_input_t i) {
+             const auto r1 = p1(i);
+             if (r1) return r1;
+             return p2(i);
+           };
+  }
+
+  // accumulation: run two parsers in sequence and combine the outputs using the
+  // given function. Both parsers must succeed.
+  template <typename P1, typename P2, typename F,
+            typename R = std::result_of_t<F(parse_t<P1>, parse_t<P2>)>>
+  constexpr auto combine(P1&& p1, P2&& p2, F&& f) {
+    return [=] (parse_input_t i) -> parse_result_t<R> {
+             const auto r1 = p1(i);
+             if (!r1) return std::nullopt;
+             const auto r2 = p2(r1->second);
+             if (!r2) return std::nullopt;
+             return parse_result_t<R>(
+                 cx::make_pair(f(r1->first, r2->first), r2->second));
+           };
+  }
+
+  // for convenience, overload < and > to mean sequencing parsers
   // and returning the result of the chosen one
   template <typename P1, typename P2,
             typename = parse_t<P1>, typename = parse_t<P2>>
   constexpr auto operator<(P1&& p1, P2&& p2) {
-    return detail::seq_parser<1>(std::forward<P1>(p1),
-                                 std::forward<P2>(p2));
+    return combine(std::forward<P1>(p1),
+                   std::forward<P2>(p2),
+                   [] (auto, const auto& r) { return r; });
   }
 
   template <typename P1, typename P2,
             typename = parse_t<P1>, typename = parse_t<P2>>
   constexpr auto operator>(P1&& p1, P2&& p2) {
-    return detail::seq_parser<0>(std::forward<P1>(p1),
-                                 std::forward<P2>(p2));
+    return combine(std::forward<P1>(p1),
+                   std::forward<P2>(p2),
+                   [] (const auto& r, auto) { return r; });
   }
 
+  // apply ? (zero or one) of a parser
+  template <typename P>
+  constexpr auto zero_or_one(P&& p)
+  {
+    using R = parse_result_t<parse_input_t>;
+    return [p = std::forward<P>(p)] (parse_input_t s) -> R {
+             const auto r = p(s);
+             if (r) return r;
+             return R(cx::make_pair(parse_input_t(s.data(), 0), s));
+           };
+  }
+
+  namespace detail
+  {
+    template <typename P, typename T, typename F>
+    constexpr cx::pair<T, parse_input_t> accumulate_parse(
+        parse_input_t s, P&& p, T init, F&& f)
+    {
+      while (!s.empty()) {
+        const auto r = p(s);
+        if (!r) return cx::make_pair(init, s);
+        init = f(init, *r);
+        s = r->second;
+      }
+      return cx::make_pair(init, s);
+    }
+  }
+
+  // apply * (zero or more) of a parser, accumulating the results according to a
+  // function F. F :: T -> (parse_t<P>, parse_input_t) -> T
+  template <typename P, typename T, typename F>
+  constexpr auto many(P&& p, T&& init, F&& f)
+  {
+    return [p = std::forward<P>(p), init = std::forward<T>(init),
+            f = std::forward<F>(f)] (parse_input_t s) {
+             return parse_result_t<T>(
+                 detail::accumulate_parse(s, p, init, f));
+           };
+  }
+
+  // apply + (one or more) of a parser, accumulating the results according to a
+  // function F. F :: T -> (parse_t<P>, parse_input_t) -> T
+  template <typename P, typename T, typename F>
+  constexpr auto many1(P&& p, T&& init, F&& f)
+  {
+    return [p = std::forward<P>(p), init = std::forward<T>(init),
+            f = std::forward<F>(f)] (parse_input_t s) -> parse_result_t<T> {
+             const auto r = p(s);
+             if (!r) return std::nullopt;
+             return parse_result_t<T>(
+                 detail::accumulate_parse(r->second, p, f(init, r->first), f));
+           };
+  }
+
+  // try to apply a parser, and if it fails, return a default
+  template <typename P, typename T = parse_t<P>>
+  constexpr auto option(T&& def, P&& p)
+  {
+    return [p = std::forward<P>(p),
+            def = std::forward<T>(def)] (parse_input_t s) {
+             const auto r = p(s);
+             if (r) return r;
+             return parse_result_t<T>(cx::make_pair(def, s));
+           };
+  }
+
+  //----------------------------------------------------------------------------
+  // parsers for various types
+
   // parse a given char
-  constexpr auto char_parser(char c)
+  constexpr auto make_char_parser(char c)
   {
     return [=] (parse_input_t s) -> parse_result_t<char> {
       if (s.empty() || s[0] != c) return std::nullopt;
@@ -145,67 +212,8 @@ namespace JSON
     };
   }
 
-  // apply ? (zero or one) of a char parser
-  template <typename P>
-  constexpr auto zero_or_one(P&& p)
-  {
-    using R = parse_result_t<parse_input_t>;
-    return [p = std::forward<P>(p)] (parse_input_t s) -> R {
-             const auto r = p(s);
-             if (!r) {
-               return R(cx::make_pair(parse_input_t(s.data(), 0), s));
-             }
-             return r;
-           };
-  }
-
-  // apply * (zero or more) of a char parser
-  template <typename P>
-  constexpr parse_result_t<parse_input_t> many_impl(
-      const char* s, size_t n, size_t max, P&& p)
-  {
-    using R = parse_result_t<parse_input_t>;
-    const parse_input_t sofar(s, n);
-    const parse_input_t rest(s+n, max-n);
-    if (n == max) {
-      return R(cx::make_pair(sofar, rest));
-    }
-    const auto r = p(rest);
-    if (!r) {
-      return R(cx::make_pair(sofar, rest));
-    }
-    return many_impl(s, n+1, max, std::forward<P>(p));
-  }
-
-  template <typename P>
-  constexpr auto many(P&& p)
-  {
-    return [p = std::forward<P>(p)] (parse_input_t s) {
-             return many_impl(s.data(), 0, s.size(), p);
-           };
-  }
-
-  // apply + (one or more) of a char parser
-  template <typename P>
-  constexpr auto many1(P&& p)
-  {
-    using R = parse_result_t<parse_input_t>;
-    return [p = std::forward<P>(p)] (parse_input_t s) -> R {
-             const auto r = p(s);
-             if (!r) return std::nullopt;
-             return many(p)(s);
-           };
-  }
-
-  // parse a digit
-  constexpr auto digit_parser()
-  {
-    using namespace std::literals;
-    return one_of("0123456789"sv);
-  }
-
   // parse a given string
-  constexpr auto string_parser(std::string_view str)
+  constexpr auto make_string_parser(std::string_view str)
   {
     return [=] (parse_input_t s) -> parse_result_t<std::string_view> {
       const auto p = cx::mismatch(str.cbegin(), str.cend(), s.cbegin(), s.cend());
@@ -220,13 +228,70 @@ namespace JSON
     };
   }
 
+  // parse an int (may begin with 0)
+  constexpr auto int0_parser()
+  {
+    using namespace std::literals;
+    constexpr auto sv_to_int =
+      [] (const auto& sv) -> int {
+        int j = 0;
+        for (char c : sv) {
+          j *= 10;
+          j += c - '0';
+        }
+        return j;
+      };
+    constexpr auto p =
+      [] (parse_input_t s) {
+        constexpr auto digit_parser = one_of("0123456789"sv);
+        return many1(digit_parser,
+                     std::string_view(s.data(), 0),
+                     [] (const auto& acc, auto) {
+                       return std::string_view(acc.data(), acc.size()+1);
+                     })(s);
+      };
+    return fmap(sv_to_int, p);
+  }
+
+  // parse an int (may not begin with 0)
+  constexpr auto int1_parser()
+  {
+    using namespace std::literals;
+    constexpr auto sv_to_int =
+      [] (const auto& sv) -> int {
+        int j = 0;
+        for (char c : sv) {
+          j *= 10;
+          j += c - '0';
+        }
+        return j;
+      };
+    constexpr auto p =
+      [] (parse_input_t s) -> parse_result_t<parse_input_t> {
+        constexpr auto digit0_parser = one_of("0123456789"sv);
+        constexpr auto digit1_parser = one_of("123456789"sv);
+        const auto r = digit1_parser(s);
+        if (!r) return std::nullopt;
+        return parse_result_t<parse_input_t>(
+            detail::accumulate_parse(r->second, digit0_parser,
+                                     parse_input_t(s.data(), 1),
+                                     [] (const auto& acc, auto) {
+                                       return std::string_view(acc.data(), acc.size()+1);
+                                     }));
+    };
+    return fmap(sv_to_int, p);
+  }
+
+  //----------------------------------------------------------------------------
+  // JSON value parsers
+
   // parse "true"
   constexpr parse_result_t<bool> parse_true(parse_input_t s)
   {
     using namespace std::literals;
-    constexpr auto quote_parser = char_parser('"');
+    constexpr auto quote_parser = make_char_parser('"');
     constexpr auto p =
-      quote_parser < string_parser("true"sv) > quote_parser;
+      quote_parser < make_string_parser("true"sv) > quote_parser;
     return fmap([] (std::string_view) { return true; }, p)(s);
   }
 
@@ -234,9 +299,9 @@ namespace JSON
   constexpr parse_result_t<bool> parse_false(parse_input_t s)
   {
     using namespace std::literals;
-    constexpr auto quote_parser = char_parser('"');
+    constexpr auto quote_parser = make_char_parser('"');
     constexpr auto p =
-      quote_parser < string_parser("false"sv) > quote_parser;
+      quote_parser < make_string_parser("false"sv) > quote_parser;
     return fmap([] (std::string_view) { return false; }, p)(s);
   }
 
@@ -244,24 +309,105 @@ namespace JSON
   constexpr parse_result_t<std::monostate> parse_null(parse_input_t s)
   {
     using namespace std::literals;
-    constexpr auto quote_parser = char_parser('"');
+    constexpr auto quote_parser = make_char_parser('"');
     constexpr auto p =
-      quote_parser < string_parser("null"sv) > quote_parser;
+      quote_parser < make_string_parser("null"sv) > quote_parser;
     return fmap([] (std::string_view) { return std::monostate{}; }, p)(s);
   }
 
-  // parse an integer
-  constexpr parse_result_t<int> parse_int(parse_input_t s)
+  // parse a number
+  constexpr parse_result_t<double> parse_number(parse_input_t s)
   {
-    auto sv_to_int = [] (std::string_view v) -> int {
-                       int i = 0;
-                       for (char c : v) {
-                         i *= 10;
-                         i += c - '0';
-                       }
-                       return i;
-                     };
-    return fmap(sv_to_int, many1(digit_parser()))(s);
+    constexpr auto neg_parser = option('+', make_char_parser('-'));
+    constexpr auto integral_parser =
+      combine(neg_parser,
+              fmap([] (char) { return 0; }, make_char_parser('0')) | int1_parser(),
+              [] (char sign, int i) { return sign == '+' ? i : -i; });
+
+    constexpr auto frac_parser = make_char_parser('.') < int0_parser();
+
+    constexpr auto mantissa_parser = combine(
+        integral_parser, option(0, frac_parser),
+        [] (int i, int f) -> double {
+          double d = 0;
+          while (f > 0) {
+            d += f % 10;
+            d /= 10;
+            f /= 10;
+          }
+          return i + d;
+        });
+
+    constexpr auto e_parser = make_char_parser('e') | make_char_parser('E');
+    constexpr auto sign_parser = make_char_parser('+') | neg_parser;
+    constexpr auto exponent_parser =
+      bind(e_parser < sign_parser,
+           [] (const char sign, const auto& sv) {
+             return fmap([sign] (int j) { return sign == '+' ? j : -j; },
+                         int0_parser())(sv);
+           });
+
+    constexpr auto p = combine(
+        mantissa_parser, option(0, exponent_parser),
+        [] (double mantissa, int exp) {
+          if (exp > 0) {
+            while (exp--) {
+              mantissa *= 10;
+            }
+          } else {
+            while (exp++) {
+              mantissa /= 10;
+            }
+          }
+          return mantissa;
+        });
+
+    return p(s);
+  }
+
+  // parse a JSON string char
+  constexpr auto convert_escaped_char(char c)
+  {
+    switch (c) {
+      case 'b': return '\b';
+      case 'f': return '\f';
+      case 'n': return '\n';
+      case 'r': return '\r';
+      case 't': return '\t';
+      default: return c;
+    }
+  }
+
+  constexpr auto string_char_parser()
+  {
+    using namespace std::literals;
+    constexpr auto slash_parser = make_char_parser('\\');
+    constexpr auto special_char_parser =
+      make_char_parser('"')
+      | make_char_parser('\\')
+      | make_char_parser('/')
+      | make_char_parser('b')
+      | make_char_parser('f')
+      | make_char_parser('n')
+      | make_char_parser('r')
+      | make_char_parser('t');
+    constexpr auto escaped_char_parser = fmap(
+        convert_escaped_char, slash_parser < special_char_parser);
+    return escaped_char_parser | none_of("\\\""sv);
+  }
+
+  // parse a JSON string
+  constexpr auto parse_string(parse_input_t s)
+  {
+    constexpr auto quote_parser = make_char_parser('"');
+    const auto str_parser =
+      many(string_char_parser(),
+           std::string_view(s.data()+1, 0),
+           [] (const auto& acc, auto) {
+             return std::string_view(acc.data(), acc.size()+1);
+           });
+    const auto p = quote_parser < str_parser > quote_parser;
+    return p(s);
   }
 
 }
