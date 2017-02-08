@@ -29,13 +29,13 @@ int main(int, char *[])
   using namespace std::literals;
   {
     // test true, false and null literals
-    constexpr auto true_val = JSON::parse_true("\"true\""sv);
+    constexpr auto true_val = JSON::parse_true("true"sv);
     static_assert(true_val && true_val->first);
 
-    constexpr auto false_val = JSON::parse_false("\"false\""sv);
+    constexpr auto false_val = JSON::parse_false("false"sv);
     static_assert(false_val && !false_val->first);
 
-    constexpr auto null_val = JSON::parse_null("\"null\""sv);
+    constexpr auto null_val = JSON::parse_null("null"sv);
     static_assert(null_val);
   }
 

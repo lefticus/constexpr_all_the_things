@@ -5,6 +5,7 @@
 #include <cx_pair.h>
 
 #include <cstddef>
+#include <functional>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -124,7 +125,7 @@ namespace JSON
       while (!s.empty()) {
         const auto r = p(s);
         if (!r) return cx::make_pair(init, s);
-        init = f(init, *r);
+        init = f(init, r->first);
         s = r->second;
       }
       return cx::make_pair(init, s);
@@ -249,54 +250,21 @@ namespace JSON
   constexpr auto int0_parser()
   {
     using namespace std::literals;
-    constexpr auto sv_to_int =
-      [] (const auto& sv) -> int {
-        int j = 0;
-        for (char c : sv) {
-          j *= 10;
-          j += c - '0';
-        }
-        return j;
-      };
-    constexpr auto p =
-      [] (parse_input_t s) {
-        constexpr auto digit_parser = one_of("0123456789"sv);
-        return many1(digit_parser,
-                     std::string_view(s.data(), 0),
-                     [] (const auto& acc, auto) {
-                       return std::string_view(acc.data(), acc.size()+1);
-                     })(s);
-      };
-    return fmap(sv_to_int, p);
+    return many1(one_of("0123456789"sv),
+                 0,
+                 [] (int acc, char c) { return (acc*10) + (c-'0'); });
   }
 
   // parse an int (may not begin with 0)
   constexpr auto int1_parser()
   {
     using namespace std::literals;
-    constexpr auto sv_to_int =
-      [] (const auto& sv) -> int {
-        int j = 0;
-        for (char c : sv) {
-          j *= 10;
-          j += c - '0';
-        }
-        return j;
-      };
-    constexpr auto p =
-      [] (parse_input_t s) -> parse_result_t<parse_input_t> {
-        constexpr auto digit0_parser = one_of("0123456789"sv);
-        constexpr auto digit1_parser = one_of("123456789"sv);
-        const auto r = digit1_parser(s);
-        if (!r) return std::nullopt;
-        return parse_result_t<parse_input_t>(
-            detail::accumulate_parse(r->second, digit0_parser,
-                                     parse_input_t(s.data(), 1),
-                                     [] (const auto& acc, auto) {
-                                       return std::string_view(acc.data(), acc.size()+1);
-                                     }));
-    };
-    return fmap(sv_to_int, p);
+    return bind(one_of("123456789"sv),
+                [] (char x, parse_input_t rest) {
+                  return many(one_of("0123456789"sv),
+                              static_cast<int>(x - '0'),
+                              [] (int acc, char c) { return (acc*10) + (c-'0'); })(rest);
+                });
   }
 
   //----------------------------------------------------------------------------
@@ -306,30 +274,24 @@ namespace JSON
   constexpr parse_result_t<bool> parse_true(parse_input_t s)
   {
     using namespace std::literals;
-    constexpr auto quote_parser = make_char_parser('"');
-    constexpr auto p =
-      quote_parser < make_string_parser("true"sv) > quote_parser;
-    return fmap([] (std::string_view) { return true; }, p)(s);
+    return fmap([] (std::string_view) { return true; },
+                make_string_parser("true"sv))(s);
   }
 
   // parse "false"
   constexpr parse_result_t<bool> parse_false(parse_input_t s)
   {
     using namespace std::literals;
-    constexpr auto quote_parser = make_char_parser('"');
-    constexpr auto p =
-      quote_parser < make_string_parser("false"sv) > quote_parser;
-    return fmap([] (std::string_view) { return false; }, p)(s);
+    return fmap([] (std::string_view) { return false; },
+                make_string_parser("false"sv))(s);
   }
 
   // parse "null"
   constexpr parse_result_t<std::monostate> parse_null(parse_input_t s)
   {
     using namespace std::literals;
-    constexpr auto quote_parser = make_char_parser('"');
-    constexpr auto p =
-      quote_parser < make_string_parser("null"sv) > quote_parser;
-    return fmap([] (std::string_view) { return std::monostate{}; }, p)(s);
+    return fmap([] (std::string_view) { return std::monostate{}; },
+                make_string_parser("null"sv))(s);
   }
 
   // parse a number
@@ -432,8 +394,7 @@ namespace JSON
   {
     constexpr auto array_parser =
       make_char_parser('[') <
-      separated_by(int1_parser(), make_char_parser(','),
-                   [] (int x, const auto& y) { return x + y.first; })
+      separated_by(int1_parser(), make_char_parser(','), std::plus<>{})
       > make_char_parser(']');
     return array_parser(s);
   }
