@@ -16,7 +16,7 @@ constexpr auto get_json_value()
   j["b"].to_String() = "Hello World";
   j["d"].to_Array();
   j["c"]["a"]["b"].to_Array().push_back(10);
-  j["c"]["a"]["c"] = cx::string("Hello World");
+  j["c"]["a"]["c"] = cx::static_string("Hello World");
   j["c"]["a"]["d"].to_Array().push_back(5.2);
   return j;
 }
@@ -42,10 +42,10 @@ int main(int, char *[])
   {
     // test strings (unicode chars unsupported as yet)
     constexpr auto char_val = JSON::string_char_parser()("t"sv);
-    static_assert(char_val && char_val->first == 't');
+    static_assert(char_val && char_val->first[0] == 't');
 
     constexpr auto echar_val = JSON::string_char_parser()("\t"sv);
-    static_assert(echar_val && echar_val->first == '\t');
+    static_assert(echar_val && echar_val->first[0] == '\t');
 
     {
       constexpr auto str_val = JSON::parse_string(R"("")"sv);
@@ -112,6 +112,35 @@ int main(int, char *[])
       constexpr auto sum_val = JSON::parse_array_sum("[1,2,3]"sv);
       static_assert(sum_val && sum_val->first == 6);
     }
+  }
+
+  {
+    // unicode points: should come out as utf-8
+    // U+2603 is the snowman
+    {
+      constexpr auto u = JSON::parse_unicode_point("\\u2603"sv);
+      static_assert(u && u->first.size() == 3
+                    && u->first[0] == static_cast<char>(0xe2)
+                    && u->first[1] == static_cast<char>(0x98)
+                    && u->first[2] == static_cast<char>(0x83));
+    }
+  }
+
+  {
+    constexpr auto f =
+      [] () {
+        cx::vector<char, 10> v;
+        v.push_back(1);
+        v.push_back(2);
+        v.push_back(3);
+        cx::vector<char, 10> v2;
+        v.push_back(4);
+        v.push_back(5);
+        v.push_back(6);
+        cx::copy(v2.cbegin(), v2.cend(), cx::back_insert_iterator(v));
+        return v.size();
+      };
+    static_assert(f() == 6);
   }
 
   return 0;

@@ -20,9 +20,9 @@ namespace cx
     struct Data
     {
       // We decrease the Depth by 1 to build a tree of different types
-      cx::map<cx::string, JSON_Value<Depth-1>, max_map_size> object;
-      cx::vector<JSON_Value<Depth-1>,             max_vector_size> array;
-      cx::string string;
+      cx::map<cx::static_string, JSON_Value<Depth-1>, max_map_size> object;
+      cx::vector<JSON_Value<Depth-1>, max_vector_size> array;
+      cx::static_string string;
       double number{0};
     };
 
@@ -45,15 +45,15 @@ namespace cx
       to_Number() = t_d;
     }
 
-    constexpr JSON_Value(cx::string t_s) {
+    constexpr JSON_Value(cx::static_string t_s) {
       to_String() = std::move(t_s);
     }
 
-    constexpr decltype(auto) operator[](const cx::string &s) {
+    constexpr decltype(auto) operator[](const cx::static_string &s) {
       return to_Object()[s];
     }
 
-    constexpr decltype(auto) operator[](const cx::string &s) const {
+    constexpr decltype(auto) operator[](const cx::static_string &s) const {
       return to_Object().at(s);
     }
 
@@ -104,13 +104,13 @@ namespace cx
 
 
 
-    constexpr const cx::string& to_String() const
+    constexpr const cx::static_string& to_String() const
     {
       assert_type(Type::String);
       return data.string;
     }
 
-    constexpr cx::string& to_String()
+    constexpr cx::static_string& to_String()
     {
       if (type != Type::String) {
         type = Type::String;

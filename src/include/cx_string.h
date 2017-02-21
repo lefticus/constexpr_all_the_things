@@ -1,18 +1,21 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
+
+#include "cx_vector.h"
 
 namespace cx
 {
-  struct string
+  struct static_string
   {
     template <std::size_t N>
-    constexpr string(const char (&str)[N])
+    constexpr static_string(const char (&str)[N])
       : m_size(N-1), m_data(&str[0])
     {
     }
 
-    constexpr string() = default;
+    constexpr static_string() = default;
 
     constexpr size_t size() const {
       return m_size;
@@ -26,7 +29,7 @@ namespace cx
     const char *m_data = nullptr;
   };
 
-  constexpr bool operator==(const string &x, const string &y)
+  constexpr bool operator==(const static_string &x, const static_string &y)
   {
     if (x.m_size != y.m_size)
       return false;
@@ -35,4 +38,8 @@ namespace cx
     while (i < x.m_size && x.m_data[i] == y.m_data[i]) { ++i; }
     return i == x.m_size;
   }
+
+  template <std::size_t N = 32>
+  using string = vector<char, N>;
+
 }

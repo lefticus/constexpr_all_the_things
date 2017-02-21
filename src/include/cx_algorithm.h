@@ -17,6 +17,8 @@ namespace cx
     return last;
   }
 
+  // And the same for all the functions here...
+
   template <class InputIt, class T>
   constexpr InputIt find(InputIt first, InputIt last, const T& value)
   {
@@ -46,6 +48,16 @@ namespace cx
       ++first1, ++first2;
     }
     return first1 == last1 && first2 == last2;
+  }
+
+  template <class InputIt, class OutputIt>
+  constexpr OutputIt copy(InputIt first, InputIt last,
+                          OutputIt d_first)
+  {
+    while (first != last) {
+        *d_first++ = *first++;
+    }
+    return d_first;
   }
 
 }
