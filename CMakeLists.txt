@@ -46,7 +46,7 @@ else()
 
   # Debug/Release
   set(CMAKE_CXX_FLAGS_DEBUG "-O0 -fno-inline -g3 -fstack-protector-all")
-  set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -g0 -march=native -mtune=native -DNDEBUG")
+  set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0 -march=native -mtune=native -DNDEBUG")
   set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_DEBUG} -fprofile-arcs -ftest-coverage")
 endif()
 
