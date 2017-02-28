@@ -21,6 +21,18 @@ namespace cx
     using reference = typename storage_t::reference;
     using const_reference = typename storage_t::const_reference;
 
+
+    template<typename Itr>
+    constexpr vector(Itr begin, const Itr &end)
+    {
+      while (begin != end) {
+        push_back(*begin);
+        ++begin;
+      }
+    }
+
+    constexpr vector() = default;
+
     constexpr auto begin() const { return m_data.begin(); }
     constexpr auto begin() { return m_data.begin(); }
 
@@ -76,6 +88,13 @@ namespace cx
     storage_t m_data{};
     std::size_t m_size{0};
   };
+
+  template<typename T, size_t Size1, size_t Size2>
+  constexpr bool operator==(const vector<T, Size1> &x, const vector<T, Size2> &y)
+  {
+    return cx::equal(x.begin(), x.end(), y.begin(), y.end());
+  }
+
 
   // Is addition (concatenation) on strings useful? Not sure yet. But it does
   // allow us to carry the type information properly.

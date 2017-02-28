@@ -113,7 +113,7 @@ namespace JSON
   // convert a unicode code point to utf-8
   constexpr auto to_utf8(uint32_t hexcode)
   {
-    cx::string<4> s;
+    cx::basic_string<char, 4> s;
     if (hexcode <= 0x7f) {
       s.push_back(static_cast<char>(hexcode));
     } else if (hexcode <= 0x7ff) {
@@ -172,7 +172,7 @@ namespace JSON
     constexpr auto p = escaped_char_parser | none_of("\\\""sv);
 
     return fmap([] (auto c) {
-      cx::string<4> s;
+      cx::basic_string<char, 4> s;
       s.push_back(c);
       return s;
     }, p) | unicode_point_parser();
@@ -188,7 +188,7 @@ namespace JSON
     constexpr auto quote_parser = make_char_parser('"');
     const auto str_parser =
       many(string_char_parser(),
-           cx::string<>{},
+           cx::string{},
            [] (auto acc, const auto& str) {
              cx::copy(str.cbegin(), str.cend(), cx::back_insert_iterator(acc));
              return acc;
@@ -242,7 +242,7 @@ namespace JSON
     {
       auto p = string_parser() < make_char_parser(':');
       return bind(p,
-                  [] (const cx::string<>& str, const auto& sv) {
+                  [] (const cx::string& str, const auto& sv) {
                     return fmap([str] (auto v) { return cx::make_pair(str, v); },
                                 value_parser<Depth>())(sv);
                   });

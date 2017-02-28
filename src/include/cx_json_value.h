@@ -9,11 +9,11 @@ namespace cx
 {
   // This Depth=5, max_vector_size=6, max_map_size=6
   // represents the practical limits of what can be compiled with GCC 7.0.1 trunk
-  template<size_t Depth=5>
+  template<size_t Depth=4>
   struct JSON_Value
   {
-    static constexpr size_t max_vector_size{6};
-    static constexpr size_t max_map_size{6};
+    static constexpr size_t max_vector_size{4};
+    static constexpr size_t max_map_size{4};
 
     // We cannot use a union because the constexpr rules are too strict 
     // for which element is initialized and which is accessed, making it
@@ -21,9 +21,9 @@ namespace cx
     struct Data
     {
       // We decrease the Depth by 1 to build a tree of different types
-      cx::map<cx::static_string, JSON_Value<Depth-1>, max_map_size> object;
+      cx::map<cx::string, JSON_Value<Depth-1>, max_map_size> object;
       cx::vector<JSON_Value<Depth-1>, max_vector_size> array;
-      cx::static_string string;
+      cx::string string;
       double number{0};
       bool boolean{false};
     };
@@ -56,16 +56,29 @@ namespace cx
     }
 
     constexpr JSON_Value(cx::static_string t_s) {
+      to_String() = cx::string(std::move(t_s));
+    }
+
+    constexpr JSON_Value(cx::string t_s) {
       to_String() = std::move(t_s);
     }
 
-    constexpr decltype(auto) operator[](const cx::static_string &s) {
+    constexpr decltype(auto) operator[](const cx::string &s) {
       return to_Object()[s];
     }
 
-    constexpr decltype(auto) operator[](const cx::static_string &s) const {
+    constexpr decltype(auto) operator[](const cx::static_string &s) {
+      return operator[](cx::string(s));
+    }
+
+    constexpr decltype(auto) operator[](const cx::string &s) const {
       return to_Object().at(s);
     }
+
+    constexpr decltype(auto) operator[](const cx::static_string &s) const {
+      return operator[](cx::string(s));
+    }
+
 
     constexpr decltype(auto) operator[](const size_t idx) {
       return to_Array()[idx];
@@ -115,13 +128,13 @@ namespace cx
       return (data.object);
     }
 
-    constexpr const cx::static_string& to_String() const
+    constexpr const cx::string& to_String() const
     {
       assert_type(Type::String);
       return data.string;
     }
 
-    constexpr cx::static_string& to_String()
+    constexpr cx::string& to_String()
     {
       if (type != Type::String) {
         type = Type::String;

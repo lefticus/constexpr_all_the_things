@@ -8,6 +8,9 @@
 #include <cx_json_parser.h>
 #include <cx_json_value.h>
 
+
+#include <iostream>
+
 constexpr auto get_json_value()
 {
   // we can elide the <> in C++17 with class template type deduction
@@ -15,18 +18,24 @@ constexpr auto get_json_value()
   j["a"].to_Number() = 15;
   j["b"].to_String() = "Hello World";
   j["d"].to_Array();
-  j["c"]["a"]["b"].to_Array().push_back(10.0);
-  j["c"]["a"]["c"] = cx::static_string("Hello World");
-  j["c"]["a"]["d"].to_Array().push_back(5.2);
+  j["c"]["b"].to_Array().push_back(10.0);
+  j["c"]["a"] = cx::static_string("Hello World");
+  j["c"]["a"].to_Array().push_back(5.2);
   return j;
 }
 
 int main(int, char *[])
 {
-  // constexpr auto json_value = get_json_value();
-  // static_assert(json_value["c"]["a"]["d"][0].to_Number() == 5.2);
+  constexpr auto json_value = get_json_value();
+  static_assert(json_value["c"]["a"][0].to_Number() == 5.2);
+
+  static_assert(json_value["b"].to_String().size() == 11);
+  static_assert(cx::static_string("Hello World").size() == 11);
+  static_assert(json_value["b"].to_String() == "Hello World");
+  
 
   using namespace std::literals;
+
   {
     // test true, false and null literals
     constexpr auto true_val = JSON::bool_parser()("true"sv);
@@ -137,6 +146,9 @@ int main(int, char *[])
 
   {
     // test JSON values
+    //
+
+
     constexpr auto true_val = JSON::value_parser<>()("true"sv);
     static_assert(true_val && true_val->first.to_Boolean());
 
@@ -148,6 +160,7 @@ int main(int, char *[])
 
     constexpr auto number_val = JSON::value_parser<>()("1.23"sv);
     static_assert(number_val && number_val->first.to_Number() == 1.23);
+
 
     constexpr auto array_val = JSON::recur::array_parser()("[1,null,true,[2]]"sv);
     static_assert(array_val

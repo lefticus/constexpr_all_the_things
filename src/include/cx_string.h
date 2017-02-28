@@ -29,21 +29,51 @@ namespace cx
       return m_data;
     }
 
+    constexpr const char *begin() const {
+      return m_data;
+    }
+
+    constexpr const char *end() const {
+      return m_data + m_size;
+    }
+
     std::size_t m_size{0};
     const char *m_data = nullptr;
   };
 
   constexpr bool operator==(const static_string &x, const static_string &y)
   {
-    if (x.m_size != y.m_size)
-      return false;
-
-    std::size_t i = 0;
-    while (i < x.m_size && x.m_data[i] == y.m_data[i]) { ++i; }
-    return i == x.m_size;
+    return cx::equal(x.begin(), x.end(), y.begin(), y.end());
   }
 
-  template <std::size_t N = 32>
-  using string = vector<char, N>;
+
+  // note that this works because vector is implicitly null terminated with its data initializer
+  template<typename CharType, size_t Size>
+  struct basic_string : vector<CharType, Size>
+  {
+    constexpr basic_string(const static_string &s) 
+      : vector<CharType, Size>(s.begin(), s.end())
+    {
+    }
+
+    constexpr basic_string() = default;
+
+    constexpr basic_string &operator=(const static_string &s) {
+      return *this = basic_string(s);
+    }
+
+    constexpr const char *c_str() const {
+      return this->data();
+    }
+  };
+
+  template<typename CharType, size_t Size>
+  constexpr bool operator==(const basic_string<CharType, Size> &lhs, const static_string &rhs)
+  {
+    return cx::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+  }
+
+  using string = basic_string<char, 32>;
+
 
 }
