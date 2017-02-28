@@ -3,6 +3,7 @@
 #include "cx_map.h"
 #include "cx_vector.h"
 
+#include <variant>
 
 namespace cx
 {
@@ -24,6 +25,7 @@ namespace cx
       cx::vector<JSON_Value<Depth-1>, max_vector_size> array;
       cx::static_string string;
       double number{0};
+      bool boolean{false};
     };
 
     enum class Type
@@ -32,17 +34,25 @@ namespace cx
       Number,
       Array,
       Object,
+      Boolean,
       Null
     };
 
     Type type = Type::Null;
     Data data;
 
-
     constexpr JSON_Value() = default;
 
     constexpr JSON_Value(const double t_d) {
       to_Number() = t_d;
+    }
+
+    constexpr JSON_Value(const bool t_b) {
+      to_Boolean() = t_b;
+    }
+
+    constexpr JSON_Value(const std::monostate) {
+      type = Type::Null;
     }
 
     constexpr JSON_Value(cx::static_string t_s) {
@@ -65,7 +75,6 @@ namespace cx
       return to_Array()[idx];
     }
 
-
     constexpr void assert_type(Type t) const
     {
       if (type != t) throw std::runtime_error("Incorrect type");
@@ -86,7 +95,6 @@ namespace cx
       return (data.array);
     }
 
-
     constexpr decltype(auto) to_Object() const
     {
       assert_type(Type::Object);
@@ -101,8 +109,6 @@ namespace cx
       }
       return (data.object);
     }
-
-
 
     constexpr const cx::static_string& to_String() const
     {
@@ -119,7 +125,6 @@ namespace cx
       return data.string;
     }
 
-
     constexpr const double& to_Number() const
     {
       assert_type(Type::Number);
@@ -133,6 +138,21 @@ namespace cx
         data.number = 0.0;
       }
       return data.number;
+    }
+
+    constexpr const bool& to_Boolean() const
+    {
+      assert_type(Type::Boolean);
+      return data.boolean;
+    }
+
+    constexpr bool& to_Boolean()
+    {
+      if (type != Type::Boolean) {
+        type = Type::Boolean;
+        data.boolean = false;
+      }
+      return data.boolean;
     }
 
   };
