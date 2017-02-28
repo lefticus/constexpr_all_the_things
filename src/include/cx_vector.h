@@ -68,6 +68,10 @@ namespace cx
     constexpr auto size() const { return m_size; }
     constexpr auto empty() const { return m_size == 0; }
 
+    constexpr const Value* data() const {
+      return m_data.data();
+    }
+
   private:
     storage_t m_data{};
     std::size_t m_size{0};

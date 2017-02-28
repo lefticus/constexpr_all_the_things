@@ -14,6 +14,10 @@ namespace cx
       : m_size(N-1), m_data(&str[0])
     {
     }
+    constexpr static_string(const char* str, std::size_t s)
+      : m_size(s), m_data(str)
+    {
+    }
 
     constexpr static_string() = default;
 

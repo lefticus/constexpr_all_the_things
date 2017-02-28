@@ -107,14 +107,6 @@ int main(int, char *[])
   }
 
   {
-    // sum array of ints
-    {
-      constexpr auto sum_val = JSON::parse_array_sum("[1,2,3]"sv);
-      static_assert(sum_val && sum_val->first == 6);
-    }
-  }
-
-  {
     // unicode points: should come out as utf-8
     // U+2603 is the snowman
     {
@@ -141,6 +133,28 @@ int main(int, char *[])
         return v.size();
       };
     static_assert(f() == 6);
+  }
+
+  {
+    // test JSON values
+    constexpr auto true_val = JSON::value_parser<>()("true"sv);
+    static_assert(true_val && true_val->first.to_Boolean());
+
+    constexpr auto false_val = JSON::value_parser<>()("false"sv);
+    static_assert(false_val && !false_val->first.to_Boolean());
+
+    constexpr auto null_val = JSON::value_parser<>()("null"sv);
+    static_assert(null_val && null_val->first.is_Null());
+
+    constexpr auto number_val = JSON::value_parser<>()("1.23"sv);
+    static_assert(number_val && number_val->first.to_Number() == 1.23);
+
+    constexpr auto array_val = JSON::recur::array_parser()("[1,null,true,[2]]"sv);
+    static_assert(array_val
+                  && array_val->first.to_Array()[0].to_Number() == 1
+                  && array_val->first.to_Array()[1].is_Null()
+                  && array_val->first.to_Array()[2].to_Boolean()
+                  && array_val->first.to_Array()[3].to_Array()[0].to_Number() == 2);
   }
 
   return 0;

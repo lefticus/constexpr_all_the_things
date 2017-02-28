@@ -57,6 +57,25 @@ namespace parser
            };
   }
 
+  // lift a value into a parser
+  template <typename T>
+  constexpr auto lift(T&& t)
+  {
+    return [t = std::forward<T>(t)] (parse_input_t s) {
+             return parse_result_t<T>(
+                 cx::make_pair(std::move(t), s));
+           };
+  }
+
+  // the parser that always fails
+  template <typename T>
+  constexpr auto fail(T)
+  {
+    return [] (parse_input_t) -> parse_result_t<T> {
+      return std::nullopt;
+    };
+  }
+
   //----------------------------------------------------------------------------
   // parser combinators
 
@@ -212,6 +231,22 @@ namespace parser
              return parse_result_t<T>(
                  detail::accumulate_parse(r->second, p, r->first, f));
            };
+  }
+
+  // apply many instances of a parser, with another parser interleaved.
+  // accumulate the results with the given function.
+  template <typename P1, typename P2, typename T, typename F>
+  constexpr auto separated_by(P1&& p1, P2&& p2, T&& init, F&& f)
+  {
+    return [p1 = std::forward<P1>(p1), p2 = std::forward<P2>(p2),
+            init = std::forward<T>(init), f = std::forward<F>(f)] (
+                parse_input_t s) -> parse_result_t<T> {
+      const auto r = p1(s);
+      if (!r) return parse_result_t<T>(cx::make_pair(std::move(init), s));
+      const auto p = p2 < p1;
+      return parse_result_t<T>(
+          detail::accumulate_parse(r->second, p, f(init, r->first), f));
+    };
   }
 
   //----------------------------------------------------------------------------

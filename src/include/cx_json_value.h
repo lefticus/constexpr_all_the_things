@@ -80,6 +80,11 @@ namespace cx
       if (type != t) throw std::runtime_error("Incorrect type");
     }
 
+    constexpr bool is_Null() const
+    {
+      return type == Type::Null;
+    }
+
     constexpr decltype(auto) to_Array() const
     {
       assert_type(Type::Array);
