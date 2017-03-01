@@ -8,6 +8,7 @@
 #include <string_view>
 #include <type_traits>
 #include <utility>
+#include <variant>
 
 namespace cx
 {
@@ -238,14 +239,14 @@ namespace parser
   template <typename P1, typename P2, typename T, typename F>
   constexpr auto separated_by(P1&& p1, P2&& p2, T&& init, F&& f)
   {
+    using R = parse_result_t<std::remove_reference_t<T>>;
     return [p1 = std::forward<P1>(p1), p2 = std::forward<P2>(p2),
             init = std::forward<T>(init), f = std::forward<F>(f)] (
-                parse_input_t s) -> parse_result_t<T> {
+                parse_input_t s) -> R {
       const auto r = p1(s);
-      if (!r) return parse_result_t<T>(cx::make_pair(std::move(init), s));
+      if (!r) return R(cx::make_pair(std::move(init), s));
       const auto p = p2 < p1;
-      return parse_result_t<T>(
-          detail::accumulate_parse(r->second, p, f(init, r->first), f));
+      return R(detail::accumulate_parse(r->second, p, f(init, r->first), f));
     };
   }
 
@@ -327,6 +328,17 @@ namespace parser
                               static_cast<int>(x - '0'),
                               [] (int acc, char c) { return (acc*10) + (c-'0'); })(rest);
                 });
+  }
+
+  // a parser for skipping whitespace
+  constexpr auto skip_whitespace()
+  {
+    constexpr auto ws_parser =
+      make_char_parser(' ')
+      | make_char_parser('\t')
+      | make_char_parser('\n')
+      | make_char_parser('\r');
+    return many(ws_parser, std::monostate{}, [] (auto m, auto) { return m; });
   }
 
 }

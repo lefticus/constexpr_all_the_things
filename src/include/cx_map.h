@@ -53,6 +53,9 @@ namespace cx
       }
     }
 
+    constexpr auto size() const { return m_size; }
+    constexpr auto empty() const { return m_size == 0; }
+
   private:
     template<typename This>
     static constexpr auto find_impl(This &&t, const Key &k)

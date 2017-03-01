@@ -196,17 +196,19 @@ namespace JSON
     return quote_parser < str_parser > quote_parser;
   }
 
+  constexpr inline std::size_t max_parse_depth{3};
+
   // since parsing JSON values involves mutual recursion, put methods in a
   // struct so that they are visible to each other
   struct recur
   {
     // parse a JSON value
 
-    template <std::size_t Depth = 5>
+    template <std::size_t Depth = max_parse_depth>
     static constexpr auto value_parser()
     {
       using namespace std::literals;
-      return fmap([] (std::string_view) { return JSON_Value<Depth>(true); },
+      constexpr auto p = fmap([] (std::string_view) { return JSON_Value<Depth>(true); },
                   make_string_parser("true"sv))
         | fmap([] (std::string_view) { return JSON_Value<Depth>(false); },
                make_string_parser("false"sv))
@@ -214,33 +216,37 @@ namespace JSON
                make_string_parser("null"sv))
         | fmap([] (double d) { return JSON_Value<Depth>(d); },
                number_parser())
+        | fmap([] (const cx::string& str) { return JSON_Value<Depth>(str); },
+               string_parser())
         | array_parser<Depth>()
-        // | fmap([] (const cx::string<>& str) { return JSON_Value<Depth>(str); },
-        //        string_parser())
-        // | object_parser<Depth>()
-      ;
+        | object_parser<Depth>();
+      return skip_whitespace() < p;
     }
 
     // parse a JSON array
 
-    template <std::size_t Depth = 5>
+    template <std::size_t Depth = max_parse_depth>
     static constexpr auto array_parser()
     {
+      JSON_Value<Depth> v{};
+      v.to_Array();
       return make_char_parser('[') <
-        separated_by(value_parser<Depth-1>(), make_char_parser(','), JSON_Value<Depth>{},
-                     [] (JSON_Value<Depth> arr, const JSON_Value<Depth-1>& val) {
+        separated_by(value_parser<Depth-1>(),
+                     skip_whitespace() < make_char_parser(','),
+                     std::move(v),
+                     [] (JSON_Value<Depth> arr, const auto& val) {
                        arr.to_Array().push_back(val);
                        return arr;
                      })
-        > make_char_parser(']');
+        > skip_whitespace() > make_char_parser(']');
     }
 
     // parse a JSON object
 
-    template <std::size_t Depth = 5>
+    template <std::size_t Depth = max_parse_depth>
     static constexpr auto key_value_parser()
     {
-      auto p = string_parser() < make_char_parser(':');
+      auto p = skip_whitespace() < string_parser() > skip_whitespace() > make_char_parser(':');
       return bind(p,
                   [] (const cx::string& str, const auto& sv) {
                     return fmap([str] (auto v) { return cx::make_pair(str, v); },
@@ -248,16 +254,20 @@ namespace JSON
                   });
     }
 
-    template <std::size_t Depth = 5>
+    template <std::size_t Depth = max_parse_depth>
     static constexpr auto object_parser()
     {
+      JSON_Value<Depth> v{};
+      v.to_Object();
       return make_char_parser('{') <
-        separated_by(key_value_parser<Depth-1>(), make_char_parser(','), JSON_Value<Depth>{},
+        separated_by(key_value_parser<Depth-1>(),
+                     skip_whitespace() < make_char_parser(','),
+                     std::move(v),
                      [] (JSON_Value<Depth> obj, const auto& kv) {
                        obj[kv.first] = kv.second;
                        return obj;
                      })
-        > make_char_parser('}');
+        > skip_whitespace() > make_char_parser('}');
     }
   };
 
@@ -268,7 +278,15 @@ namespace JSON
   }
 
   // provide the value parser outside the struct qualification
-  template <std::size_t Depth = 5>
+  template <std::size_t Depth = max_parse_depth>
   constexpr auto value_parser = recur::value_parser<Depth>;
+
+  namespace literals
+  {
+    constexpr auto operator "" _json(const char* str, std::size_t len)
+    {
+      return value_parser<>()(std::string_view{str, len});
+    }
+  }
 
 }

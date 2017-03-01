@@ -12,8 +12,8 @@ namespace cx
   template<size_t Depth=4>
   struct JSON_Value
   {
-    static constexpr size_t max_vector_size{4};
-    static constexpr size_t max_map_size{4};
+    static constexpr size_t max_vector_size{6};
+    static constexpr size_t max_map_size{6};
 
     // We cannot use a union because the constexpr rules are too strict 
     // for which element is initialized and which is accessed, making it

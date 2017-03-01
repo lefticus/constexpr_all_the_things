@@ -146,8 +146,6 @@ int main(int, char *[])
 
   {
     // test JSON values
-    //
-
 
     constexpr auto true_val = JSON::value_parser<>()("true"sv);
     static_assert(true_val && true_val->first.to_Boolean());
@@ -161,13 +159,59 @@ int main(int, char *[])
     constexpr auto number_val = JSON::value_parser<>()("1.23"sv);
     static_assert(number_val && number_val->first.to_Number() == 1.23);
 
+    constexpr auto str_val = JSON::value_parser<>()(R"("hello")"sv);
+    static_assert(str_val && str_val->first.to_String() == "hello");
 
-    constexpr auto array_val = JSON::recur::array_parser()("[1,null,true,[2]]"sv);
-    static_assert(array_val
-                  && array_val->first.to_Array()[0].to_Number() == 1
-                  && array_val->first.to_Array()[1].is_Null()
-                  && array_val->first.to_Array()[2].to_Boolean()
-                  && array_val->first.to_Array()[3].to_Array()[0].to_Number() == 2);
+    {
+      constexpr auto object_val = JSON::value_parser<>()("{}"sv);
+      static_assert(object_val && object_val->first.to_Object().empty());
+    }
+
+    {
+      constexpr auto object_val = JSON::value_parser<>()(R"({"a":1})"sv);
+      static_assert(object_val && object_val->first["a"].to_Number() == 1);
+    }
+
+    {
+      constexpr auto object_val = JSON::value_parser<>()(R"({"a":1,"b":true,"c":{}})"sv);
+      static_assert(object_val
+                    && object_val->first.to_Object().size() == 3
+                    && object_val->first["a"].to_Number() == 1
+                    && object_val->first["b"].to_Boolean()
+                    && object_val->first["c"].to_Object().empty());
+    }
+
+    {
+      constexpr auto array_val = JSON::value_parser<>()("[]"sv);
+      static_assert(array_val && array_val->first.to_Array().empty());
+    }
+
+    {
+      constexpr auto array_val = JSON::recur::array_parser()(R"([1,null,true,[2],{},"hello"])"sv);
+      static_assert(array_val
+                    && array_val->first[0].to_Number() == 1
+                    && array_val->first[1].is_Null()
+                    && array_val->first[2].to_Boolean()
+                    && array_val->first[3][0].to_Number() == 2
+                    && array_val->first[4].to_Object().empty()
+                    && array_val->first[5].to_String() == "hello");
+    }
+
+    {
+      using namespace JSON::literals;
+      constexpr auto val = R"( [
+                                 1 , null , true , [ 2 ] ,
+                                 { "a" : 3.14 } , "hello"
+                               ] )"_json;
+      static_assert(val
+                    && val->first[0].to_Number() == 1
+                    && val->first[1].is_Null()
+                    && val->first[2].to_Boolean()
+                    && val->first[3][0].to_Number() == 2
+                    && val->first[4]["a"].to_Number() == 3.14
+                    && val->first[5].to_String() == "hello");
+    }
+
   }
 
   return 0;
