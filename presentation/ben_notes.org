@@ -1,0 +1,125 @@
+* constexpr JSON parsing
+
+** First attempt
+
+JSON_Value is a recursive template that decrements its Depth argument with each
+recursion, so it has a max depth.
+
+Parsed by JSON::value_recur. Methods in a struct can be mutually recursive,
+They are templates because they have to be (JSON_Value is).
+
+Recursive template instantiation must have a base case:
+value_recur::value_parser<0>. fail() (the parser that always fails) is an easy
+way to provide the right type.
+
+Major source of slowness is template depth.
+
+Wrapping the body of value_recur::value_parser in a lambda is a good compilation
+speed boost. Note the use of "if false (fail(...))" to help the compiler deduce
+the return type of the lambda... necessary to break the recursion otherwise
+resulting.
+
+Whitespace is handled in a disciplined way (we could sprinkle skip_whitespace()
+more or less everywhere and it would work... but I don't like that). So
+skip_whitespace() conventionally appears before each parse. i.e. before
+value_parser, before the commas that separate values in arrays and objects,
+before the colon that separates strings and values in object kv-pairs, and
+before the closing brackets/curly of an array/object. That suffices.
+
+** Second attempt
+
+*** The Idea
+First, compute the total number of sub-values required by the JSON value
+(including itself) - hopefully this is a much faster operation than a full parse
+into objects.
+
+Then, use the size information to right-size an array of values.
+
+Then, re-parse the object into the array. Values which are themselves
+arrays/objects will point into the owning array somehow.
+
+*** Counting number of objects
+Easy, having solved JSON parsing. Instead of aggregating objects, we just sum up
+a size_t.
+
+Note: numobjects_recur is a template so that we can use auto (deduced return
+types) for the member functions. Otherwise mutual recursion doesn't work? But
+only a single template instantiation is necessary.
+
+Note in value_parser we had multiple fmap() calls combined in alternation to
+provide for different returns (true, false, null). Since the parsers for true,
+false and null are all of the same type, and the numobjects parser returns the
+same thing for each (i.e. 1), the alternation is pushed down, so we have fewer
+fmap() calls. We do still fmap() individually for string_parser and
+number_parser because they have different types: we can't alternate them
+directly.
+
+The number-of-objects literal _json_size uses the templated version of the UDL.
+We will want to use the return value as a template argument - since function
+arguments are not constexpr, we could not use the result of numobjects() called
+on a function argument as a template argument. So numobjects simply unpacks the
+template parameter pack into an initializer_list<char> from which it makes a
+string_view.
+
+*** Building the non-recursive JSON value
+JSON_Value2 is not a template this time. (It still has max array and object sizes.)
+
+Hopefully this means faster compiles even though we parse the literal twice
+(once for size, once for real). We could introduce a straight-up max array size
+I suppose and not do the size parse...
+
+The UDL _json2 uses numobjects on its template arguments to find out the right
+total number of JSON values we need to build, then instantiates value2_recur
+which contains a vector<JSON_Value2, N>.
+
+Like numobjects_recur, value2_recur is itself a template, so the member
+functions don't need to be. Member functions are static for ease of use with
+parser machinery (is this necessary? not sure).
+
+Constructing a value2_recur does the parsing, then _json2 simply returns the
+resulting vector.
+
+Each parse branch pushes a value into the vector we're building, and returns its
+index.
+
+Constructing arrays and objects is a little more involved. They both basically
+work the same way. Note that the opening bracket (or curly) parse is hoisted
+into the value_parser, and that both compound type parsers now have their bodies
+wrapped in lambdas. This is because we need to insert a top-level array or
+object value into the output vector, and we only want to do it if the opener
+parse succeeds. The lambda wrapping gives us the laziness we want.
+
+Constructing a JSON_Value2 - or a JSON_Value for that matter - as an empty
+array/object is not yet there, but an easy addition. Would make pushing the
+array/object value nicer.
+
+Discovery: compilers don't really like constexpr pointer trickery. I first tried
+making the array of values inside the JSON_Value2 use JSON_Value2* as its
+value_type, and pointing it directly to the appropriate siblings in the vec. No
+luck there - a one-way ticket to "value is not constexpr". (And besides, I
+realised, having internal pointers makes it not a value type any more - copying
+would be... interesting?) Abandoned that.
+
+So indexes it is. In particular, offsets - we know the index of the base array
+object, and we can accumulate and store the offsets of its children from it.
+JSON_Value2 therefore assumes it's in a vector of values (that we build) and
+performs arithmetic on its this pointer to return references to its children.
+Not pretty, but it works. (Probably there are safety issues also! Handle with
+care.)
+
+That's it. _json2 returns the vector of nested values, correctly sized. Since it
+is not recursive, JSON_Value2 can handle much deeper nesting than JSON_Value can.
+
+I'm tempted to think that perhaps this technique is further applicable to the
+insides of a JSON_Value2 - could we externalize the storage of the vector/map
+inside it? But perhaps not: rightsizing those containers would involve
+templating JSON_Value2... or type erasing it (what a concept, constexpr type
+erasure? I don't think it's possible yet - or maybe ever).
+
+But hm, if we could make the container ranges contiguous in the external
+storage, they could be represented as two indices. Because JSON values can be
+arbitrarily nested, this might be hard to do - some kind of breadth-first parse
+is indicated perhaps, to contiguous-ize siblings.
+
+There is probably a lot of cleanup to do to makes things nicer. But it's 2am
+here. So, future me and/or Jason, you just get these notes for now.
