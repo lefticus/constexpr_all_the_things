@@ -236,15 +236,31 @@ namespace parser
 
   // apply many instances of a parser, with another parser interleaved.
   // accumulate the results with the given function.
+  template <typename P1, typename P2, typename F0, typename F>
+  constexpr auto separated_by(P1&& p1, P2&& p2, F0&& init, F&& f)
+  {
+    using R = parse_result_t<std::result_of_t<F0()>>;
+    return [p1 = std::forward<P1>(p1), p2 = std::forward<P2>(p2),
+            init = std::forward<F0>(init), f = std::forward<F>(f)] (
+                parse_input_t s) -> R {
+      const auto r = p1(s);
+      if (!r) return R(cx::make_pair(init(), s));
+      const auto p = p2 < p1;
+      return R(detail::accumulate_parse(r->second, p, f(init(), r->first), f));
+    };
+  }
+
+  // apply many instances of a parser, with another parser interleaved.
+  // accumulate the results with the given function.
   template <typename P1, typename P2, typename T, typename F>
-  constexpr auto separated_by(P1&& p1, P2&& p2, T&& init, F&& f)
+  constexpr auto separated_by_val(P1&& p1, P2&& p2, T&& init, F&& f)
   {
     using R = parse_result_t<std::remove_reference_t<T>>;
     return [p1 = std::forward<P1>(p1), p2 = std::forward<P2>(p2),
             init = std::forward<T>(init), f = std::forward<F>(f)] (
                 parse_input_t s) -> R {
       const auto r = p1(s);
-      if (!r) return R(cx::make_pair(std::move(init), s));
+      if (!r) return R(cx::make_pair(init, s));
       const auto p = p2 < p1;
       return R(detail::accumulate_parse(r->second, p, f(init, r->first), f));
     };

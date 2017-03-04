@@ -187,7 +187,8 @@ int main(int, char *[])
     }
 
     {
-      constexpr auto array_val = JSON::recur::array_parser()(R"([1,null,true,[2],{},"hello"])"sv);
+      constexpr auto array_val = JSON::value_recur::array_parser()(
+          R"([1,null,true,[2],{},"hello"])"sv);
       static_assert(array_val
                     && array_val->first[0].to_Number() == 1
                     && array_val->first[1].is_Null()
@@ -210,6 +211,73 @@ int main(int, char *[])
                     && val->first[3][0].to_Number() == 2
                     && val->first[4]["a"].to_Number() == 3.14
                     && val->first[5].to_String() == "hello");
+    }
+  }
+
+  {
+    // test number of JSON objects parsing
+
+    {
+      constexpr auto d = JSON::numobjects_parser()("true"sv);
+      static_assert(d && d->first == 1);
+    }
+    {
+      constexpr auto d = JSON::numobjects_parser()("[]"sv);
+      static_assert(d && d->first == 1);
+    }
+    {
+      constexpr auto d = JSON::numobjects_parser()("[1,2,3,4]"sv);
+      static_assert(d && d->first == 5);
+    }
+    {
+      constexpr auto d = JSON::numobjects_parser()(R"({"a":1, "b":2})"sv);
+      static_assert(d && d->first == 3);
+    }
+  }
+
+  {
+    using namespace JSON::literals;
+    constexpr auto s = R"({"a":1, "b":2})"_json_size;
+    static_assert(s == 3);
+  }
+
+  {
+    // alternative JSON representation/parser (JSON_Value2)
+    using namespace JSON::literals;
+
+    {
+      constexpr auto jsa = R"([1, ["hello"], true])"_json2;
+      static_assert(jsa[0][0].to_Number() == 1
+                    && jsa[0][1][0].to_String() == "hello"
+                    && jsa[0][2].to_Boolean());
+    }
+
+    {
+      constexpr auto jsa = R"({"a":1, "b":true, "c":["hello"]})"_json2;
+      static_assert(jsa[0]["a"].to_Number() == 1
+                    && jsa[0]["b"].to_Boolean()
+                    && jsa[0]["c"][0].to_String() == "hello");
+    }
+
+    {
+      constexpr auto val = R"( [
+                                 1 , null , true , [ 2 ] ,
+                                 { "a" : 3.14 } , "hello"
+                               ] )"_json2;
+      static_assert(val[0][0].to_Number() == 1
+                    && val[0][1].is_Null()
+                    && val[0][2].to_Boolean()
+                    && val[0][3][0].to_Number() == 2
+                    && val[0][4]["a"].to_Number() == 3.14
+                    && val[0][5].to_String() == "hello");
+      static_assert(val.size() == val.capacity());
+    }
+
+    {
+      // this one can go pretty deep...
+      constexpr auto val = R"([[[[[[[[[[[[1]]]]]]]]]]]])"_json2;
+      static_assert(val[0][0][0][0][0][0][0][0][0][0][0][0][0].to_Number() == 1);
+      static_assert(val.size() == val.capacity() && val.size() == 13);
     }
 
   }

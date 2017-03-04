@@ -21,7 +21,6 @@ namespace cx
     using reference = typename storage_t::reference;
     using const_reference = typename storage_t::const_reference;
 
-
     template<typename Itr>
     constexpr vector(Itr begin, const Itr &end)
     {
@@ -69,16 +68,21 @@ namespace cx
       }
     }
 
-    constexpr void push_back(Value t_v) {
+    constexpr Value& push_back(Value t_v) {
       if (m_size >= Size) {
         throw std::range_error("Index past end of vector");
       } else {
-        m_data[m_size++] = std::move(t_v);
+        Value& v = m_data[m_size++];
+        v = std::move(t_v);
+        return v;
       }
     }
 
+    constexpr auto capacity() const { return Size; }
     constexpr auto size() const { return m_size; }
     constexpr auto empty() const { return m_size == 0; }
+
+    constexpr void clear() { m_size = 0; }
 
     constexpr const Value* data() const {
       return m_data.data();
