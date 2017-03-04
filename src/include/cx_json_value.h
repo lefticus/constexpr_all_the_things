@@ -15,17 +15,14 @@ namespace cx
     static constexpr size_t max_vector_size{6};
     static constexpr size_t max_map_size{6};
 
-    // We cannot use a union because the constexpr rules are too strict 
-    // for which element is initialized and which is accessed, making it
-    // impossible to default initialize it
-    struct Data
+    union Data
     {
       // We decrease the Depth by 1 to build a tree of different types
       cx::map<cx::string, JSON_Value<Depth-1>, max_map_size> object;
       cx::vector<JSON_Value<Depth-1>, max_vector_size> array;
       cx::string string;
-      double number{0};
-      bool boolean{false};
+      double number;
+      bool boolean;
     };
 
     enum class Type
@@ -39,7 +36,7 @@ namespace cx
     };
 
     Type type = Type::Null;
-    Data data;
+    Data data{};
 
     constexpr JSON_Value() = default;
 
@@ -189,16 +186,13 @@ namespace cx
     static constexpr size_t max_vector_size{6};
     static constexpr size_t max_map_size{6};
 
-    // We cannot use a union because the constexpr rules are too strict
-    // for which element is initialized and which is accessed, making it
-    // impossible to default initialize it
-    struct Data
+    union Data
     {
       cx::map<cx::string, std::size_t, max_map_size> object;
       cx::vector<std::size_t, max_vector_size> array;
       cx::string string;
-      double number{0};
-      bool boolean{false};
+      double number;
+      bool boolean;
     };
 
     enum class Type
@@ -212,7 +206,7 @@ namespace cx
     };
 
     Type type = Type::Null;
-    Data data;
+    Data data{};
 
     constexpr JSON_Value2() = default;
 
