@@ -72,7 +72,16 @@ namespace parser
   template <typename T>
   constexpr auto fail(T)
   {
-    return [] (parse_input_t) -> parse_result_t<T> {
+    return [=] (parse_input_t) -> parse_result_t<T> {
+      return std::nullopt;
+    };
+  }
+
+  template <typename T, typename ErrorFn>
+  constexpr auto fail(T, ErrorFn f)
+  {
+    return [=] (parse_input_t) -> parse_result_t<T> {
+      f();
       return std::nullopt;
     };
   }

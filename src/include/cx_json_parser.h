@@ -239,15 +239,20 @@ namespace JSON
         separated_by(value_parser(),
                      skip_whitespace() < make_char_parser(','),
                      [] () { return std::size_t{1}; }, std::plus<>{})
-        > skip_whitespace() > make_char_parser(']');
+        > skip_whitespace()
+        > (make_char_parser(']') | fail(']', [] { throw "expected ]"; }));
     }
 
     // parse a JSON object
 
     static constexpr auto key_value_parser()
     {
-      return skip_whitespace() < string_parser()
-        < skip_whitespace() < make_char_parser(':')
+      return skip_whitespace()
+        < (string_parser()
+           | fail(cx::string{}, [] { throw "expected a string as object key"; }))
+        < skip_whitespace()
+        < (make_char_parser(':')
+           | fail(':', [] { throw "expected a colon as object key-value separator"; }))
         < value_parser();
     }
 
@@ -257,7 +262,8 @@ namespace JSON
         separated_by(key_value_parser(),
                      skip_whitespace() < make_char_parser(','),
                      [] () { return std::size_t{1}; }, std::plus<>{})
-        > skip_whitespace() > make_char_parser('}');
+        > skip_whitespace()
+        > (make_char_parser('}') | fail('}', [] { throw "expected }"; }));
     }
 
   };
@@ -380,7 +386,8 @@ namespace JSON
     constexpr auto operator "" _json2()
     {
       constexpr std::initializer_list<T> il{Ts...};
-      return value2_recur<numobjects<Ts...>()>(std::string_view(il.begin(), il.size())).vec;
+      constexpr auto N = numobjects<Ts...>();
+      return value2_recur<N>(std::string_view(il.begin(), il.size())).vec;
     }
   }
 

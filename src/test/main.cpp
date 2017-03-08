@@ -201,5 +201,17 @@ int main(int, char *[])
     }
   }
 
+  {
+    // intentionally failing parse tests
+    // using namespace JSON::literals;
+    // constexpr auto jsa1 = R"({)"_json2;
+    // constexpr auto jsa2 = R"([)"_json2;
+    // constexpr auto jsa3 = R"({"a")"_json2;
+    // constexpr auto jsa4 = R"({1)"_json2;
+    // constexpr auto jsa5 = R"({"a":1)"_json2;
+    // constexpr auto jsa6 = R"([1,])"_json2;
+
+  }
+
   return 0;
 }
