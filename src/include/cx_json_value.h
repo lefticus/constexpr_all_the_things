@@ -11,7 +11,7 @@ namespace cx
   // ---------------------------------------------------------------------------
   // Alternative non-recursive definition of a JSON value
 
-  struct JSON_Value2
+  struct JSON_Value
   {
     static constexpr size_t max_vector_size{6};
     static constexpr size_t max_map_size{6};
@@ -38,25 +38,25 @@ namespace cx
     Type type = Type::Null;
     Data data{};
 
-    constexpr JSON_Value2() = default;
+    constexpr JSON_Value() = default;
 
-    constexpr JSON_Value2(const double t_d) {
+    constexpr JSON_Value(const double t_d) {
       to_Number() = t_d;
     }
 
-    constexpr JSON_Value2(const bool t_b) {
+    constexpr JSON_Value(const bool t_b) {
       to_Boolean() = t_b;
     }
 
-    constexpr JSON_Value2(const std::monostate) {
+    constexpr JSON_Value(const std::monostate) {
       type = Type::Null;
     }
 
-    constexpr JSON_Value2(cx::static_string t_s) {
+    constexpr JSON_Value(cx::static_string t_s) {
       to_String() = cx::string(std::move(t_s));
     }
 
-    constexpr JSON_Value2(cx::string t_s) {
+    constexpr JSON_Value(cx::string t_s) {
       to_String() = std::move(t_s);
     }
 
@@ -90,27 +90,27 @@ namespace cx
       return (data.object);
     }
 
-    constexpr JSON_Value2& operator[](const cx::string &s) {
+    constexpr JSON_Value& operator[](const cx::string &s) {
       return *(this + to_Object()[s]);
     }
 
-    constexpr JSON_Value2& operator[](const cx::static_string &s) {
+    constexpr JSON_Value& operator[](const cx::static_string &s) {
       return operator[](cx::string(s));
     }
 
-    constexpr const JSON_Value2& operator[](const cx::string &s) const {
+    constexpr const JSON_Value& operator[](const cx::string &s) const {
       return *(this + to_Object().at(s));
     }
 
-    constexpr const JSON_Value2& operator[](const cx::static_string &s) const {
+    constexpr const JSON_Value& operator[](const cx::static_string &s) const {
       return operator[](cx::string(s));
     }
 
-    constexpr JSON_Value2& operator[](const size_t idx) {
+    constexpr JSON_Value& operator[](const size_t idx) {
       return *(this + to_Array()[idx]);
     }
 
-    constexpr const JSON_Value2& operator[](const size_t idx) const {
+    constexpr const JSON_Value& operator[](const size_t idx) const {
       return *(this + to_Array()[idx]);
     }
 
