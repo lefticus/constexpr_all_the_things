@@ -189,6 +189,16 @@ int main(int, char *[])
       static_assert(val.size() == val.capacity() && val.size() == 13);
     }
 
+    {
+      //what's the point of all this?
+      //constexpr can be used as template parameters!
+
+      constexpr auto jsa = R"({"a":0, "b":1})"_json2;
+
+      constexpr std::tuple<double, int> t{ 5.2, 33 };
+      static_assert(std::get<int(jsa[0]["b"].to_Number())>(t) == 33);
+
+    }
   }
 
   return 0;
