@@ -383,7 +383,7 @@ namespace JSON
   namespace literals
   {
     template <typename T, T... Ts>
-    constexpr auto operator "" _json2()
+    constexpr auto operator "" _json()
     {
       constexpr std::initializer_list<T> il{Ts...};
       constexpr auto N = numobjects<Ts...>();

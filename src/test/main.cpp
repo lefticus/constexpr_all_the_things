@@ -155,14 +155,14 @@ int main(int, char *[])
     using namespace JSON::literals;
 
     {
-      constexpr auto jsa = R"([1, ["hello"], true])"_json2;
+      constexpr auto jsa = R"([1, ["hello"], true])"_json;
       static_assert(jsa[0][0].to_Number() == 1
                     && jsa[0][1][0].to_String() == "hello"
                     && jsa[0][2].to_Boolean());
     }
 
     {
-      constexpr auto jsa = R"({"a":1, "b":true, "c":["hello"]})"_json2;
+      constexpr auto jsa = R"({"a":1, "b":true, "c":["hello"]})"_json;
       static_assert(jsa[0]["a"].to_Number() == 1
                     && jsa[0]["b"].to_Boolean()
                     && jsa[0]["c"][0].to_String() == "hello");
@@ -172,7 +172,7 @@ int main(int, char *[])
       constexpr auto val = R"( [
                                  1 , null , true , [ 2 ] ,
                                  { "a" : 3.14 } , "hello"
-                               ] )"_json2;
+                               ] )"_json;
       static_assert(val[0][0].to_Number() == 1
                     && val[0][1].is_Null()
                     && val[0][2].to_Boolean()
@@ -184,7 +184,7 @@ int main(int, char *[])
 
     {
       // this one can go pretty deep...
-      constexpr auto val = R"([[[[[[[[[[[[1]]]]]]]]]]]])"_json2;
+      constexpr auto val = R"([[[[[[[[[[[[1]]]]]]]]]]]])"_json;
       static_assert(val[0][0][0][0][0][0][0][0][0][0][0][0][0].to_Number() == 1);
       static_assert(val.size() == val.capacity() && val.size() == 13);
     }
@@ -193,7 +193,7 @@ int main(int, char *[])
       //what's the point of all this?
       //constexpr can be used as template parameters!
 
-      constexpr auto jsa = R"({"a":0, "b":1})"_json2;
+      constexpr auto jsa = R"({"a":0, "b":1})"_json;
 
       constexpr std::tuple<double, int> t{ 5.2, 33 };
       static_assert(std::get<int(jsa[0]["b"].to_Number())>(t) == 33);
@@ -204,12 +204,12 @@ int main(int, char *[])
   {
     // intentionally failing parse tests
     // using namespace JSON::literals;
-    // constexpr auto jsa1 = R"({)"_json2;
-    // constexpr auto jsa2 = R"([)"_json2;
-    // constexpr auto jsa3 = R"({"a")"_json2;
-    // constexpr auto jsa4 = R"({1)"_json2;
-    // constexpr auto jsa5 = R"({"a":1)"_json2;
-    // constexpr auto jsa6 = R"([1,])"_json2;
+    // constexpr auto jsa1 = R"({)"_json;
+    // constexpr auto jsa2 = R"([)"_json;
+    // constexpr auto jsa3 = R"({"a")"_json;
+    // constexpr auto jsa4 = R"({1)"_json;
+    // constexpr auto jsa5 = R"({"a":1)"_json;
+    // constexpr auto jsa6 = R"([1,])"_json;
 
   }
 
