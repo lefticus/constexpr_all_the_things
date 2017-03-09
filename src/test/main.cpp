@@ -156,16 +156,16 @@ int main(int, char *[])
 
     {
       constexpr auto jsa = R"([1, ["hello"], true])"_json;
-      static_assert(jsa[0][0].to_Number() == 1
-                    && jsa[0][1][0].to_String() == "hello"
-                    && jsa[0][2].to_Boolean());
+      static_assert(jsa[0].to_Number() == 1
+                    && jsa[1][0].to_String() == "hello"
+                    && jsa[2].to_Boolean());
     }
 
     {
       constexpr auto jsa = R"({"a":1, "b":true, "c":["hello"]})"_json;
-      static_assert(jsa[0]["a"].to_Number() == 1
-                    && jsa[0]["b"].to_Boolean()
-                    && jsa[0]["c"][0].to_String() == "hello");
+      static_assert(jsa["a"].to_Number() == 1
+                    && jsa["b"].to_Boolean()
+                    && jsa["c"][0].to_String() == "hello");
     }
 
     {
@@ -173,20 +173,18 @@ int main(int, char *[])
                                  1 , null , true , [ 2 ] ,
                                  { "a" : 3.14 } , "hello"
                                ] )"_json;
-      static_assert(val[0][0].to_Number() == 1
-                    && val[0][1].is_Null()
-                    && val[0][2].to_Boolean()
-                    && val[0][3][0].to_Number() == 2
-                    && val[0][4]["a"].to_Number() == 3.14
-                    && val[0][5].to_String() == "hello");
-      static_assert(val.size() == val.capacity());
+      static_assert(val[0].to_Number() == 1
+                    && val[1].is_Null()
+                    && val[2].to_Boolean()
+                    && val[3][0].to_Number() == 2
+                    && val[4]["a"].to_Number() == 3.14
+                    && val[5].to_String() == "hello");
     }
 
     {
       // this one can go pretty deep...
       constexpr auto val = R"([[[[[[[[[[[[1]]]]]]]]]]]])"_json;
-      static_assert(val[0][0][0][0][0][0][0][0][0][0][0][0][0].to_Number() == 1);
-      static_assert(val.size() == val.capacity() && val.size() == 13);
+      static_assert(val[0][0][0][0][0][0][0][0][0][0][0][0].to_Number() == 1);
     }
 
     {
@@ -196,7 +194,7 @@ int main(int, char *[])
       constexpr auto jsa = R"({"a":0, "b":1})"_json;
 
       constexpr std::tuple<double, int> t{ 5.2, 33 };
-      static_assert(std::get<int(jsa[0]["b"].to_Number())>(t) == 33);
+      static_assert(std::get<int(jsa["b"].to_Number())>(t) == 33);
 
     }
   }

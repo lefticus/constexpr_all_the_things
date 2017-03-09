@@ -294,15 +294,9 @@ namespace JSON
   // return the index into the vector resulting from the parsed value
 
   template <std::size_t N>
-  struct value2_recur
+  struct value_recur
   {
-    using V = cx::vector<JSON_Value, N>;
-    V vec{};
-
-    constexpr value2_recur(parse_input_t s)
-    {
-      value_parser(vec)(s);
-    }
+    using V = cx::vector<value, N>;
 
     // parse a JSON value
 
@@ -313,15 +307,15 @@ namespace JSON
                // deduce the return type of this lambda
                if (false) return fail(std::size_t{})(sv);
                const auto p =
-                 fmap([&] (auto) { v.push_back(JSON_Value(true)); return v.size()-1; },
+                 fmap([&] (auto) { v.push_back(value(true)); return v.size()-1; },
                       make_string_parser("true"sv))
-                 | fmap([&] (auto) { v.push_back(JSON_Value(false)); return v.size()-1; },
+                 | fmap([&] (auto) { v.push_back(value(false)); return v.size()-1; },
                       make_string_parser("false"sv))
-                 | fmap([&] (auto) { v.push_back(JSON_Value(std::monostate{})); return v.size()-1; },
+                 | fmap([&] (auto) { v.push_back(value(std::monostate{})); return v.size()-1; },
                         make_string_parser("null"sv))
-                 | fmap([&] (double d) { v.push_back(JSON_Value(d)); return v.size()-1; },
+                 | fmap([&] (double d) { v.push_back(value(d)); return v.size()-1; },
                         number_parser())
-                 | fmap([&] (const cx::string& s) { v.push_back(JSON_Value(s)); return v.size()-1; },
+                 | fmap([&] (const cx::string& s) { v.push_back(value(s)); return v.size()-1; },
                         string_parser())
                  | (make_char_parser('[') < array_parser(v))
                  | (make_char_parser('{') < object_parser(v));
@@ -334,7 +328,7 @@ namespace JSON
     static constexpr auto array_parser(V& v)
     {
       return [&] (const auto& sv) {
-               JSON_Value val{};
+               value val{};
                val.to_Array();
                v.push_back(std::move(val));
                const auto p = separated_by_val(
@@ -364,7 +358,7 @@ namespace JSON
     static constexpr auto object_parser(V& v)
     {
       return [&] (const auto& sv) {
-               JSON_Value val{};
+               value val{};
                val.to_Object();
                v.push_back(std::move(val));
                const auto p = separated_by_val(
@@ -380,6 +374,39 @@ namespace JSON
 
   };
 
+  // a value_wrapper wraps a parsed JSON::value, and provides a proxy
+  // pass-through interface to the value
+  template <size_t N>
+  struct value_wrapper
+  {
+    constexpr value_wrapper(parse_input_t s)
+    {
+      value_recur<N>::value_parser(storage)(s);
+    }
+
+    constexpr const value& operator[](const cx::string& s) const { return storage[0][s]; }
+    constexpr const value& operator[](const cx::string& s) { return storage[0][s]; }
+    constexpr const value& operator[](const cx::static_string& s) const { return storage[0][s]; }
+    constexpr const value& operator[](const cx::static_string& s) { return storage[0][s]; }
+    constexpr const value& operator[](const size_t idx) const { return storage[0][idx]; }
+    constexpr const value& operator[](const size_t idx) { return storage[0][idx]; }
+
+    constexpr bool is_Null() const { return storage[0].is_Null(); }
+    constexpr decltype(auto) to_Object() const { return storage[0].to_Object(); }
+    constexpr decltype(auto) to_Object() { return storage[0].to_Object(); }
+    constexpr decltype(auto) to_Array() const { return storage[0].to_Array(); }
+    constexpr decltype(auto) to_Array() { return storage[0].to_Array(); }
+    constexpr bool& to_String() const { return storage[0].to_String(); }
+    constexpr bool& to_String() { return storage[0].to_String(); }
+    constexpr bool& to_Number() const { return storage[0].to_Number(); }
+    constexpr bool& to_Number() { return storage[0].to_Number(); }
+    constexpr bool& to_Boolean() const { return storage[0].to_Boolean(); }
+    constexpr bool& to_Boolean() { return storage[0].to_Boolean(); }
+
+  private:
+    cx::vector<value, N> storage;
+  };
+
   namespace literals
   {
     template <typename T, T... Ts>
@@ -387,7 +414,7 @@ namespace JSON
     {
       constexpr std::initializer_list<T> il{Ts...};
       constexpr auto N = numobjects<Ts...>();
-      return value2_recur<N>(std::string_view(il.begin(), il.size())).vec;
+      return value_wrapper<N>(std::string_view(il.begin(), il.size()));
     }
   }
 
