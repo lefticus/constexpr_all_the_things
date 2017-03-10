@@ -8,9 +8,6 @@
 #include <cx_json_parser.h>
 #include <cx_json_value.h>
 
-
-#include <iostream>
-
 int main(int, char *[])
 {
   using namespace std::literals;
@@ -107,25 +104,7 @@ int main(int, char *[])
   }
 
   {
-    constexpr auto f =
-      [] () {
-        cx::vector<char, 10> v;
-        v.push_back(1);
-        v.push_back(2);
-        v.push_back(3);
-        cx::vector<char, 10> v2;
-        v.push_back(4);
-        v.push_back(5);
-        v.push_back(6);
-        cx::copy(v2.cbegin(), v2.cend(), cx::back_insert_iterator(v));
-        return v.size();
-      };
-    static_assert(f() == 6);
-  }
-
-  {
     // test number of JSON objects parsing
-
     {
       constexpr auto d = JSON::numobjects_parser()("true"sv);
       static_assert(d && d->first == 1);
@@ -145,13 +124,27 @@ int main(int, char *[])
   }
 
   {
-    using namespace JSON::literals;
-    constexpr auto s = R"({"a":1, "b":2})"_json_size;
-    static_assert(s == 3);
+    // test string size of JSON objects parsing
+    {
+      constexpr auto d = JSON::string_size_parser()(R"("a")"sv);
+      static_assert(d && d->first == 1);
+    }
+    {
+      constexpr auto d = JSON::stringsize_parser()("true"sv);
+      static_assert(d && d->first == 0);
+    }
+    {
+      constexpr auto d = JSON::stringsize_parser()(R"(["a", "b"])"sv);
+      static_assert(d && d->first == 2);
+    }
+    {
+      constexpr auto d = JSON::stringsize_parser()(R"({"a":1, "b":2})"sv);
+      static_assert(d && d->first == 2);
+    }
   }
 
   {
-    // alternative JSON representation/parser (JSON_Value2)
+    // test JSON value parsing
     using namespace JSON::literals;
 
     {
@@ -195,7 +188,6 @@ int main(int, char *[])
 
       constexpr std::tuple<double, int> t{ 5.2, 33 };
       static_assert(std::get<int(jsa["b"].to_Number())>(t) == 33);
-
     }
   }
 

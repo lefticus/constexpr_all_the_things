@@ -123,3 +123,28 @@ is indicated perhaps, to contiguous-ize siblings.
 
 There is probably a lot of cleanup to do to makes things nicer. But it's 2am
 here. So, future me and/or Jason, you just get these notes for now.
+
+*** Thoughts on the external storage technique
+External storage can be refined by wrapping the array and providing proxy
+accessors to the JSON::value(s) inside. This also simplifies the value
+interface, allowing removal of indexing operators, and we no longer store
+offsets: now we store real indices, because the wrapper is able to provide the
+array to index.
+
+The fact that JSON::value has its array/object types with indices into the
+external storage means that it is effectively read-only, at least as far as the
+tree structure goes. Strings, bools, numbers, nulls are still contained value
+types, so can be altered.
+
+At the cost of more parses, and the constraint of making contained strings read
+only, the string storage could also be externalized by providing a parser that
+returns the required string size for an object (to store any contained strings
+and keys). The string type would be stored as offset and length, and the
+to_String accessor could then return a string_view into the storage.
+
+The efficiency of external storage comes with the constraint of read-only
+accessors for some contained types. This could perhaps be alleviated by mutators
+that actually set other types (e.g. parse to a string_view, read string_view, on
+write, change to a string). Obviously constexpr parsing results in a read-only
+value at runtime, but runtime parsing could use this strategy for alternative
+writable types?

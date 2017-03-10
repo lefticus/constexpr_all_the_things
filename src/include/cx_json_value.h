@@ -9,7 +9,7 @@ namespace JSON
 {
 
   // ---------------------------------------------------------------------------
-  // Alternative non-recursive definition of a JSON value
+  // non-recursive definition of a JSON value
 
   struct value
   {
@@ -90,30 +90,6 @@ namespace JSON
       return (data.object);
     }
 
-    constexpr value& operator[](const cx::string &s) {
-      return *(this + to_Object()[s]);
-    }
-
-    constexpr value& operator[](const cx::static_string &s) {
-      return operator[](cx::string(s));
-    }
-
-    constexpr const value& operator[](const cx::string &s) const {
-      return *(this + to_Object().at(s));
-    }
-
-    constexpr const value& operator[](const cx::static_string &s) const {
-      return operator[](cx::string(s));
-    }
-
-    constexpr value& operator[](const size_t idx) {
-      return *(this + to_Array()[idx]);
-    }
-
-    constexpr const value& operator[](const size_t idx) const {
-      return *(this + to_Array()[idx]);
-    }
-
     constexpr void assert_type(Type t) const
     {
       if (type != t) throw std::runtime_error("Incorrect type");
@@ -168,7 +144,54 @@ namespace JSON
       }
       return data.boolean;
     }
-
   };
+
+  // A value_proxy provides an interface to the value, decoupling the external
+  // storage.
+  template <size_t NumObjects, typename T>
+  struct value_proxy
+  {
+    constexpr auto operator[](const cx::string& s) const {
+      auto idx = object_storage[index].to_Object().at(s);
+      return value_proxy{idx, object_storage};
+    }
+    constexpr auto operator[](const cx::string& s) {
+      auto idx = object_storage[index].to_Object().at(s);
+      return value_proxy{idx, object_storage};
+    }
+    constexpr auto operator[](const cx::static_string &s) const {
+      return operator[](cx::string(s));
+    }
+    constexpr auto operator[](const cx::static_string &s) {
+      return operator[](cx::string(s));
+    }
+    constexpr auto operator[](std::size_t idx) const {
+      auto i = object_storage[index].to_Array()[idx];
+      return value_proxy{i, object_storage};
+    }
+    constexpr auto operator[](std::size_t idx) {
+      auto i = object_storage[index].to_Array()[idx];
+      return value_proxy{i, object_storage};
+    }
+
+    constexpr auto is_Null() const { return object_storage[index].is_Null(); }
+    constexpr decltype(auto) to_String() const { return object_storage[index].to_String(); }
+    constexpr decltype(auto) to_String() { return object_storage[index].to_String(); }
+    constexpr decltype(auto) to_Number() const { return object_storage[index].to_Number(); }
+    constexpr decltype(auto) to_Number() { return object_storage[index].to_Number(); }
+    constexpr decltype(auto) to_Boolean() const { return object_storage[index].to_Boolean(); }
+    constexpr decltype(auto) to_Boolean() { return object_storage[index].to_Boolean(); }
+
+    std::size_t index;
+    T& object_storage;
+  };
+
+  template <size_t NumObjects>
+  value_proxy(std::size_t i, const cx::vector<value, NumObjects>& v)
+    -> value_proxy<NumObjects, const cx::vector<value, NumObjects>>;
+
+  template <size_t NumObjects>
+  value_proxy(std::size_t i, cx::vector<value, NumObjects>& v)
+    -> value_proxy<NumObjects, cx::vector<value, NumObjects>>;
 
 }

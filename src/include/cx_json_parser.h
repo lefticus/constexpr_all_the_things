@@ -87,6 +87,9 @@ namespace JSON
         });
   }
 
+  // ---------------------------------------------------------------------------
+  // parsing JSON strings
+
   // parse a JSON string char
 
   // When parsing a JSON string, in general multiple chars in the input may
@@ -197,8 +200,64 @@ namespace JSON
     return quote_parser < str_parser > quote_parser;
   }
 
-  constexpr inline std::size_t max_parse_depth{3};
+  // ---------------------------------------------------------------------------
+  // parse the size of a JSON string
 
+  constexpr std::size_t to_utf8_count(uint32_t hexcode)
+  {
+    if (hexcode <= 0x7f) {
+      return 1;
+    } else if (hexcode <= 0x7ff) {
+      return 2;
+    } else if (hexcode <= 0xffff) {
+      return 3;
+    }
+    return 4;
+  }
+
+  constexpr auto unicode_point_count_parser()
+  {
+    using namespace std::literals;
+    constexpr auto p =
+      make_char_parser('\\') <
+      make_char_parser('u') <
+      exactly_n(
+          one_of("0123456789abcdefABCDEF"sv),
+          4, 0u,
+          [] (uint16_t hexcode, char c) -> uint16_t {
+            return (hexcode << 4) + to_hex(c);
+          });
+    return fmap(to_utf8_count, p);
+  }
+
+  constexpr auto string_char_count_parser()
+  {
+    using namespace std::literals;
+    constexpr auto slash_parser = make_char_parser('\\');
+    constexpr auto special_char_parser =
+      make_char_parser('"')
+      | make_char_parser('\\')
+      | make_char_parser('/')
+      | make_char_parser('b')
+      | make_char_parser('f')
+      | make_char_parser('n')
+      | make_char_parser('r')
+      | make_char_parser('t');
+    constexpr auto escaped_char_parser = fmap(
+        convert_escaped_char, slash_parser < special_char_parser);
+    constexpr auto p = escaped_char_parser | none_of("\\\""sv);
+
+    return fmap([] (auto) -> std::size_t { return 1; }, p)
+      | unicode_point_count_parser();
+  }
+
+  constexpr auto string_size_parser()
+  {
+    constexpr auto quote_parser = make_char_parser('"');
+    constexpr auto str_parser =
+      many(string_char_count_parser(), std::size_t{}, std::plus<>{});
+    return quote_parser < str_parser > quote_parser;
+  }
 
   //----------------------------------------------------------------------------
   // JSON number-of-objects-required parser
@@ -278,17 +337,86 @@ namespace JSON
     return numobjects_parser()(std::string_view(il.begin(), il.size()))->first;
   }
 
-  namespace literals
+  //----------------------------------------------------------------------------
+  // JSON string-size-required parser
+  // A string is its own size
+  // An array is the sum of value sizes within it
+  // An object is the sum of key sizes and value sizes within it
+  // Anything else is just 0
+
+  template <std::size_t = 0>
+  struct stringsize_recur
   {
-    template <typename T, T... Ts>
-    constexpr auto operator "" _json_size()
+    // parse a JSON value
+
+    static constexpr auto value_parser()
     {
-      return numobjects<Ts...>();
+      using namespace std::literals;
+      return [] (const auto& sv) {
+               // deduce the return type of this lambda
+               if (false) return fail(std::size_t{})(sv);
+               constexpr auto p =
+                 fmap([] (auto) -> std::size_t { return 0; },
+                      make_string_parser("true"sv) | make_string_parser("false"sv)
+                      | make_string_parser("null"sv))
+                 | fmap([] (auto) -> std::size_t { return 0; },
+                        number_parser())
+                 | string_size_parser()
+                 | array_parser()
+                 | object_parser();
+               return (skip_whitespace() < p)(sv);
+             };
     }
+
+    // parse a JSON array
+
+    static constexpr auto array_parser()
+    {
+      return make_char_parser('[') <
+        separated_by_val(value_parser(),
+                         skip_whitespace() < make_char_parser(','),
+                         std::size_t{0}, std::plus<>{})
+        > skip_whitespace()
+        > make_char_parser(']');
+    }
+
+    // parse a JSON object
+
+    static constexpr auto key_value_parser()
+    {
+      constexpr auto p =
+        skip_whitespace() < string_size_parser() > skip_whitespace() > make_char_parser(':');
+      return bind(p,
+                  [&] (std::size_t s1, const auto& sv) {
+                    return fmap([s1] (std::size_t s2) { return s1 + s2; },
+                                value_parser())(sv);
+                  });
+    }
+
+    static constexpr auto object_parser()
+    {
+      return make_char_parser('{') <
+        separated_by_val(key_value_parser(),
+                         skip_whitespace() < make_char_parser(','),
+                         std::size_t{}, std::plus<>{})
+        > skip_whitespace()
+        > make_char_parser('}');
+    }
+
+  };
+
+  // provide the string size parser outside the struct qualification
+  constexpr auto stringsize_parser = stringsize_recur<>::value_parser;
+
+  template <char... Cs>
+  constexpr auto stringsize()
+  {
+    std::initializer_list<char> il{Cs...};
+    return stringsize_parser()(std::string_view(il.begin(), il.size()))->first;
   }
 
   //----------------------------------------------------------------------------
-  // alternative JSON parser
+  // JSON parser
 
   // parse into a vector
   // return the index into the vector resulting from the parsed value
@@ -335,7 +463,7 @@ namespace JSON
                    value_parser(v), skip_whitespace() < make_char_parser(','),
                    v.size()-1,
                    [&] (std::size_t arr_idx, std::size_t element_idx) {
-                     v[arr_idx].to_Array().push_back(element_idx - arr_idx);
+                     v[arr_idx].to_Array().push_back(element_idx);
                      return arr_idx;
                    }) > skip_whitespace() > make_char_parser(']');
                return p(sv);
@@ -365,7 +493,7 @@ namespace JSON
                    key_value_parser(v), skip_whitespace() < make_char_parser(','),
                    v.size()-1,
                    [&] (std::size_t obj_idx, const auto& kv) {
-                     v[obj_idx].to_Object()[kv.first] = kv.second - obj_idx;
+                     v[obj_idx].to_Object()[kv.first] = kv.second;
                      return obj_idx;
                    }) > skip_whitespace() > make_char_parser('}');
                return p(sv);
@@ -374,37 +502,52 @@ namespace JSON
 
   };
 
-  // a value_wrapper wraps a parsed JSON::value, and provides a proxy
-  // pass-through interface to the value
-  template <size_t N>
+  // A value_wrapper wraps a parsed JSON::value and contains the externalized
+  // storage.
+  template <size_t NumObjects>
   struct value_wrapper
   {
     constexpr value_wrapper(parse_input_t s)
     {
-      value_recur<N>::value_parser(storage)(s);
+      value_recur<NumObjects>::value_parser(object_storage)(s);
     }
 
-    constexpr const value& operator[](const cx::string& s) const { return storage[0][s]; }
-    constexpr const value& operator[](const cx::string& s) { return storage[0][s]; }
-    constexpr const value& operator[](const cx::static_string& s) const { return storage[0][s]; }
-    constexpr const value& operator[](const cx::static_string& s) { return storage[0][s]; }
-    constexpr const value& operator[](const size_t idx) const { return storage[0][idx]; }
-    constexpr const value& operator[](const size_t idx) { return storage[0][idx]; }
+    constexpr operator value_proxy<NumObjects, const cx::vector<value, NumObjects>>() const {
+      return value_proxy{0, object_storage};
+    }
+    constexpr operator value_proxy<NumObjects, cx::vector<value, NumObjects>>() {
+      return value_proxy{0, object_storage};
+    }
 
-    constexpr bool is_Null() const { return storage[0].is_Null(); }
-    constexpr decltype(auto) to_Object() const { return storage[0].to_Object(); }
-    constexpr decltype(auto) to_Object() { return storage[0].to_Object(); }
-    constexpr decltype(auto) to_Array() const { return storage[0].to_Array(); }
-    constexpr decltype(auto) to_Array() { return storage[0].to_Array(); }
-    constexpr bool& to_String() const { return storage[0].to_String(); }
-    constexpr bool& to_String() { return storage[0].to_String(); }
-    constexpr bool& to_Number() const { return storage[0].to_Number(); }
-    constexpr bool& to_Number() { return storage[0].to_Number(); }
-    constexpr bool& to_Boolean() const { return storage[0].to_Boolean(); }
-    constexpr bool& to_Boolean() { return storage[0].to_Boolean(); }
+    constexpr auto operator[](const cx::string& s) const {
+      return value_proxy{0, object_storage}[s];
+    }
+    constexpr auto operator[](const cx::string& s) {
+      return value_proxy{0, object_storage}[s];
+    }
+    constexpr auto operator[](const cx::static_string &s) const {
+      return operator[](cx::string(s));
+    }
+    constexpr auto operator[](const cx::static_string &s) {
+      return operator[](cx::string(s));
+    }
+    constexpr auto operator[](std::size_t idx) const {
+      return value_proxy{0, object_storage}[idx];
+    }
+    constexpr auto operator[](std::size_t idx) {
+      return value_proxy{0, object_storage}[idx];
+    }
+
+    constexpr auto is_Null() const { return object_storage[0].is_Null(); }
+    constexpr decltype(auto) to_String() const { return object_storage[0].to_String(); }
+    constexpr decltype(auto) to_String() { return object_storage[0].to_String(); }
+    constexpr decltype(auto) to_Number() const { return object_storage[0].to_Number(); }
+    constexpr decltype(auto) to_Number() { return object_storage[0].to_Number(); }
+    constexpr decltype(auto) to_Boolean() const { return object_storage[0].to_Boolean(); }
+    constexpr decltype(auto) to_Boolean() { return object_storage[0].to_Boolean(); }
 
   private:
-    cx::vector<value, N> storage;
+    cx::vector<value, NumObjects> object_storage;
   };
 
   namespace literals
