@@ -1,7 +1,7 @@
 #include <cx_algorithm.h>
 #include <cx_vector.h>
 
-void algo_tests()
+void algo_tests_nonmod()
 {
 
   {
@@ -132,4 +132,88 @@ void algo_tests()
     constexpr auto it = cx::adjacent_find(haystack.cbegin(), haystack.cend());
     static_assert(it == haystack.cend() - 4, "adjacent_find fail");
   }
+}
+
+void algo_tests_mod()
+{
+  {
+    constexpr auto il = {1, 3, 5, 7, 9};
+    constexpr auto vec = [&] () {
+        cx::vector<int, 5> v;
+        cx::copy(il.begin(), il.end(), cx::back_insert_iterator(v));
+        return v;
+    }();
+    static_assert(vec.size() == 5, "copy fail");
+  }
+
+  {
+    constexpr auto il = {1, 2, 5, 7, 4};
+    constexpr auto vec = [&] () {
+        cx::vector<int, 5> v;
+        cx::copy_if(il.begin(), il.end(), cx::back_insert_iterator(v),
+                    [] (auto i) { return i % 2 == 0; });
+        return v;
+    }();
+    static_assert(vec.size() == 2, "copy_if fail");
+  }
+
+  {
+    constexpr auto il = {1, 3, 5, 7, 9};
+    constexpr auto vec = [&] () {
+        cx::vector<int, 5> v;
+        cx::copy_n(il.begin(), 3, cx::back_insert_iterator(v));
+        return v;
+    }();
+    static_assert(vec.size() == 3, "copy_n fail");
+  }
+
+  {
+    constexpr auto il = {1, 3, 5, 7, 9};
+    constexpr auto vec = [&] () {
+        cx::vector<int, 5> v = {0,0,0,0,0};
+        cx::copy_backward(il.begin(), il.end(), v.end());
+        return v;
+    }();
+    static_assert(vec.size() == 5 && vec[0] == 1 && vec[4] == 9, "copy_backward fail");
+  }
+
+  {
+    constexpr auto il = {1, 3, 5, 7, 9};
+    constexpr auto vec = [&] () {
+        cx::vector<int, 5> v;
+        cx::move(il.begin(), il.end(), cx::back_insert_iterator(v));
+        return v;
+    }();
+    static_assert(vec.size() == 5, "move fail");
+  }
+
+  {
+    constexpr auto il = {1, 3, 5, 7, 9};
+    constexpr auto vec = [&] () {
+        cx::vector<int, 5> v = {0,0,0,0,0};
+        cx::move_backward(il.begin(), il.end(), v.end());
+        return v;
+    }();
+    static_assert(vec.size() == 5 && vec[0] == 1 && vec[4] == 9, "move_backward fail");
+  }
+
+  {
+    constexpr auto vec = [] () {
+        cx::vector<int, 5> v{1,2,3,4,5};
+        cx::fill(v.begin(), v.end(), 5);
+        return v;
+    }();
+    static_assert(vec.size() == 5 && vec[0] == 5, "fill fail");
+  }
+
+  {
+    constexpr auto vec = [] () {
+        cx::vector<int, 5> v;
+        cx::fill_n(cx::back_insert_iterator(v), 3, 5);
+        return v;
+    }();
+    static_assert(vec.size() == 3
+                  && vec[0] == 5 && vec[1] == 5 && vec[2] == 5, "fill_n fail");
+  }
+
 }

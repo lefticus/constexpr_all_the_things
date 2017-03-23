@@ -29,6 +29,10 @@ namespace cx
         ++begin;
       }
     }
+    constexpr vector(std::initializer_list<Value> init)
+      : vector(init.begin(), init.end())
+    {
+    }
 
     constexpr vector() = default;
 
