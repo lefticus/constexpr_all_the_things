@@ -1,1 +1,1 @@
-add_executable (test_${PROJECT_NAME} main.cpp)
+add_executable (test_${PROJECT_NAME} algorithm.cpp json.cpp main.cpp)
