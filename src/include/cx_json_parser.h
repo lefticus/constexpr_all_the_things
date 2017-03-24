@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cx_algorithm.h>
+#include <cx_iterator.h>
 #include <cx_json_value.h>
 #include <cx_parser.h>
 #include <cx_string.h>
@@ -416,19 +417,86 @@ namespace JSON
   }
 
   //----------------------------------------------------------------------------
+  // JSON extent parser
+  // Everything returns a monostate: we only need the extent which we can
+  // calculate from the leftover part
+
+  template <std::size_t = 0>
+  struct extent_recur
+  {
+    // parse a JSON value
+
+    static constexpr auto value_parser()
+    {
+      using namespace std::literals;
+      return [] (const auto& sv) {
+               // deduce the return type of this lambda
+               if (false) return fail(std::monostate{})(sv);
+               constexpr auto p =
+                 fmap([] (auto) { return std::monostate{}; },
+                      make_string_parser("true"sv) | make_string_parser("false"sv)
+                      | make_string_parser("null"sv))
+                 | fmap([] (auto) { return std::monostate{}; },
+                        number_parser())
+                 | fmap([] (auto) { return std::monostate{}; },
+                        string_parser())
+                 | array_parser()
+                 | object_parser();
+               return (skip_whitespace() < p)(sv);
+             };
+    }
+
+    // parse a JSON array
+
+    static constexpr auto array_parser()
+    {
+      return make_char_parser('[') <
+        separated_by_val(value_parser(),
+                         skip_whitespace() < make_char_parser(','),
+                         std::monostate{}, [] (auto x, auto) { return x; })
+        > skip_whitespace()
+        > make_char_parser(']');
+    }
+
+    // parse a JSON object
+
+    static constexpr auto key_value_parser()
+    {
+      return skip_whitespace() < string_parser()
+        < skip_whitespace() < make_char_parser(':')
+        < value_parser();
+    }
+
+    static constexpr auto object_parser()
+    {
+      return make_char_parser('{') <
+        separated_by_val(key_value_parser(),
+                         skip_whitespace() < make_char_parser(','),
+                         std::monostate{}, [] (auto x, auto) { return x; })
+        > skip_whitespace()
+        > make_char_parser('}');
+    }
+
+  };
+
+  // provide the extent parser outside the struct qualification
+  constexpr auto extent_parser = extent_recur<>::value_parser;
+
+  //----------------------------------------------------------------------------
   // JSON parser
 
   // parse into a vector
   // return the index into the vector resulting from the parsed value
 
-  template <std::size_t N>
+  template <std::size_t NObj, std::size_t NString>
   struct value_recur
   {
-    using V = cx::vector<value, N>;
+    using V = cx::vector<value, NObj>;
+    using S = cx::basic_string<char, NString>;
 
     // parse a JSON value
 
-    static constexpr auto value_parser(V& v)
+    static constexpr auto value_parser(V& v, S& s)
     {
       using namespace std::literals;
       return [&] (const auto& sv) {
@@ -443,24 +511,31 @@ namespace JSON
                         make_string_parser("null"sv))
                  | fmap([&] (double d) { v.push_back(value(d)); return v.size()-1; },
                         number_parser())
-                 | fmap([&] (const cx::string& s) { v.push_back(value(s)); return v.size()-1; },
+                 | fmap([&] (const cx::string& str) {
+                          auto offset = s.size();
+                          cx::copy(str.cbegin(), str.cend(),
+                                   cx::back_insert_iterator(s));
+                          value::ExternalString es { offset, s.size() - offset };
+                          v.push_back(value(es));
+                          return v.size()-1;
+                        },
                         string_parser())
-                 | (make_char_parser('[') < array_parser(v))
-                 | (make_char_parser('{') < object_parser(v));
+                 | (make_char_parser('[') < array_parser(v, s))
+                 | (make_char_parser('{') < object_parser(v, s));
                return (skip_whitespace() < p)(sv);
              };
     }
 
     // parse a JSON array
 
-    static constexpr auto array_parser(V& v)
+    static constexpr auto array_parser(V& v, S& s)
     {
       return [&] (const auto& sv) {
                value val{};
                val.to_Array();
                v.push_back(std::move(val));
                const auto p = separated_by_val(
-                   value_parser(v), skip_whitespace() < make_char_parser(','),
+                   value_parser(v, s), skip_whitespace() < make_char_parser(','),
                    v.size()-1,
                    [&] (std::size_t arr_idx, std::size_t element_idx) {
                      v[arr_idx].to_Array().push_back(element_idx);
@@ -472,25 +547,27 @@ namespace JSON
 
     // parse a JSON object
 
-    static constexpr auto key_value_parser(V& v)
+    static constexpr auto key_value_parser(V& v, S& s)
     {
       constexpr auto p =
         skip_whitespace() < string_parser() > skip_whitespace() > make_char_parser(':');
       return bind(p,
                   [&] (const cx::string& str, const auto& sv) {
-                    return fmap([str] (std::size_t idx) { return cx::make_pair(str, idx); },
-                                value_parser(v))(sv);
+                    return fmap([&] (std::size_t idx) {
+                                  return cx::make_pair(str, idx);
+                                },
+                      value_parser(v, s))(sv);
                   });
     }
 
-    static constexpr auto object_parser(V& v)
+    static constexpr auto object_parser(V& v, S& s)
     {
       return [&] (const auto& sv) {
                value val{};
                val.to_Object();
                v.push_back(std::move(val));
                const auto p = separated_by_val(
-                   key_value_parser(v), skip_whitespace() < make_char_parser(','),
+                   key_value_parser(v, s), skip_whitespace() < make_char_parser(','),
                    v.size()-1,
                    [&] (std::size_t obj_idx, const auto& kv) {
                      v[obj_idx].to_Object()[kv.first] = kv.second;
@@ -504,43 +581,48 @@ namespace JSON
 
   // A value_wrapper wraps a parsed JSON::value and contains the externalized
   // storage.
-  template <size_t NumObjects>
+  template <size_t NumObjects, size_t StringSize>
   struct value_wrapper
   {
     constexpr value_wrapper(parse_input_t s)
     {
-      value_recur<NumObjects>::value_parser(object_storage)(s);
+      value_recur<NumObjects, StringSize>::value_parser(object_storage, string_storage)(s);
     }
 
-    constexpr operator value_proxy<NumObjects, const cx::vector<value, NumObjects>>() const {
-      return value_proxy{0, object_storage};
+    constexpr operator value_proxy<NumObjects, const cx::vector<value, NumObjects>,
+                                   const cx::basic_string<char, StringSize>>() const {
+      return value_proxy{0, object_storage, string_storage};
     }
-    constexpr operator value_proxy<NumObjects, cx::vector<value, NumObjects>>() {
-      return value_proxy{0, object_storage};
+    constexpr operator value_proxy<NumObjects, cx::vector<value, NumObjects>,
+                                   cx::basic_string<char, StringSize>>() {
+      return value_proxy{0, object_storage, string_storage};
     }
 
-    constexpr auto operator[](const cx::string& s) const {
-      return value_proxy{0, object_storage}[s];
+    template <typename K,
+              std::enable_if_t<!std::is_integral<K>::value, int> = 0>
+    constexpr auto operator[](const K& s) const {
+      return value_proxy{0, object_storage, string_storage}[s];
     }
-    constexpr auto operator[](const cx::string& s) {
-      return value_proxy{0, object_storage}[s];
+    template <typename K,
+              std::enable_if_t<!std::is_integral<K>::value, int> = 0>
+    constexpr auto operator[](const K& s) {
+      return value_proxy{0, object_storage, string_storage}[s];
     }
-    constexpr auto operator[](const cx::static_string &s) const {
-      return operator[](cx::string(s));
-    }
-    constexpr auto operator[](const cx::static_string &s) {
-      return operator[](cx::string(s));
-    }
+
     constexpr auto operator[](std::size_t idx) const {
-      return value_proxy{0, object_storage}[idx];
+      return value_proxy{0, object_storage, string_storage}[idx];
     }
     constexpr auto operator[](std::size_t idx) {
-      return value_proxy{0, object_storage}[idx];
+      return value_proxy{0, object_storage, string_storage}[idx];
     }
 
     constexpr auto is_Null() const { return object_storage[0].is_Null(); }
-    constexpr decltype(auto) to_String() const { return object_storage[0].to_String(); }
-    constexpr decltype(auto) to_String() { return object_storage[0].to_String(); }
+    constexpr decltype(auto) to_String() const {
+      return value_proxy{0, object_storage, string_storage}.to_String();
+    }
+    constexpr decltype(auto) to_String() {
+      return value_proxy{0, object_storage, string_storage}.to_String();
+    }
     constexpr decltype(auto) to_Number() const { return object_storage[0].to_Number(); }
     constexpr decltype(auto) to_Number() { return object_storage[0].to_Number(); }
     constexpr decltype(auto) to_Boolean() const { return object_storage[0].to_Boolean(); }
@@ -548,6 +630,7 @@ namespace JSON
 
   private:
     cx::vector<value, NumObjects> object_storage;
+    cx::basic_string<char, StringSize> string_storage;
   };
 
   namespace literals
@@ -557,7 +640,8 @@ namespace JSON
     {
       constexpr std::initializer_list<T> il{Ts...};
       constexpr auto N = numobjects<Ts...>();
-      return value_wrapper<N>(std::string_view(il.begin(), il.size()));
+      constexpr auto S = stringsize<Ts...>();
+      return value_wrapper<N, S>(std::string_view(il.begin(), il.size()));
     }
   }
 
