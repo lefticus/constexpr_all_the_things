@@ -26,22 +26,14 @@ void algo_tests_nonmod()
   }
 
   {
-    // the next few lines compile (why?), but are useless...
-    constexpr int arr[] = {1, 3, 5, 7, 9};
-    constexpr cx::vector<int, 5> v;
-    // if v is constexpr, we can capture a reference-to-v in a constexpr lambda,
-    // and call a constexpr method on it
-    constexpr auto f = cx::for_each(std::cbegin(arr), std::cend(arr),
-                                    [&] (int i) { v.push_back(i+1); });
-    // and do it as much as we like, even though it looks like a buffer overflow
-    // here...
-    f(11);
-    f(13);
-    f(15);
-    f(17);
-    f(19);
-    // there is no effect
-    static_assert(v.empty(), "for_each fail");
+    constexpr auto vec = [] () {
+        int arr[] = {1, 3, 5, 7, 9};
+        cx::vector<int, 5> v;
+        cx::for_each(std::cbegin(arr), std::cend(arr),
+                     [&] (int i) { v.push_back(i+1); });
+        return v;
+    }();
+    static_assert(vec.size() == 5 && vec[0] == 2, "for_each fail");
   }
 
   {
