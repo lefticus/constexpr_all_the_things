@@ -148,3 +148,24 @@ that actually set other types (e.g. parse to a string_view, read string_view, on
 write, change to a string). Obviously constexpr parsing results in a read-only
 value at runtime, but runtime parsing could use this strategy for alternative
 writable types?
+
+** third attempt - improvements and further thoughts
+
+The string size parser allows external storage of strings, meaning that only a
+static_string or string_view need be contained within the json value.
+
+The json value still contains 2 arbitrarily-sized "arrays" - the value array
+type and the value object type. These also need to be externalized.
+
+To externalize the arrays means to store offset + extent in the json value
+itself, which means that the storage must be contiguous in the external buffer.
+This means that the parse cannot output values depth-first: it must work
+breadth-first. Which means we need the ability to put to-be-parsed objects
+(children of the current parse) on a queue. We know an upper bound on queue size
+because we know the storage size required for the objects. We need some way to
+(cheaply?) skip over to-be-parsed objects - we need an object extent parser
+which will just return monostate and we can calculate the extent from the
+current position and the leftover position.
+
+If we have a way to cheaply skip to-be-parsed objects, perhaps we have the
+ability to do lazy parsing.
