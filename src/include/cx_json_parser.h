@@ -274,21 +274,19 @@ namespace JSON
     static constexpr auto value_parser()
     {
       using namespace std::literals;
-      return [] (const auto& sv) {
-               // deduce the return type of this lambda
-               if (false) return fail(std::size_t{})(sv);
-               constexpr auto p =
-                 fmap([] (auto) -> std::size_t { return 1; },
-                      make_string_parser("true"sv) | make_string_parser("false"sv)
-                      | make_string_parser("null"sv))
-                 | fmap([] (auto) -> std::size_t { return 1; },
-                        number_parser())
-                 | fmap([] (auto) -> std::size_t { return 1; },
-                        string_parser())
-                 | array_parser()
-                 | object_parser();
-               return (skip_whitespace() < p)(sv);
-             };
+      return [] (const auto& sv) -> parse_result_t<std::size_t> {
+        constexpr auto p =
+          fmap([] (auto) -> std::size_t { return 1; },
+               make_string_parser("true"sv) | make_string_parser("false"sv)
+               | make_string_parser("null"sv))
+          | fmap([] (auto) -> std::size_t { return 1; },
+                 number_parser())
+        | fmap([] (auto) -> std::size_t { return 1; },
+               string_parser())
+        | array_parser()
+        | object_parser();
+        return (skip_whitespace() < p)(sv);
+      };
     }
 
     // parse a JSON array
@@ -296,9 +294,9 @@ namespace JSON
     static constexpr auto array_parser()
     {
       return make_char_parser('[') <
-        separated_by(value_parser(),
-                     skip_whitespace() < make_char_parser(','),
-                     [] () { return std::size_t{1}; }, std::plus<>{})
+        separated_by_val(value_parser(),
+                         skip_whitespace() < make_char_parser(','),
+                         std::size_t{1}, std::plus<>{})
         > skip_whitespace()
         > (make_char_parser(']') | fail(']', [] { throw "expected ]"; }));
     }
@@ -307,21 +305,22 @@ namespace JSON
 
     static constexpr auto key_value_parser()
     {
+      // would like to give sensible errors here about expecting ':' or
+      // expecting string key, but this parser needs to be able to fail without
+      // error to deal with empty objects ({})
       return skip_whitespace()
-        < (string_parser()
-           | fail(cx::string{}, [] { throw "expected a string as object key"; }))
+        < string_parser()
         < skip_whitespace()
-        < (make_char_parser(':')
-           | fail(':', [] { throw "expected a colon as object key-value separator"; }))
+        < make_char_parser(':')
         < value_parser();
     }
 
     static constexpr auto object_parser()
     {
       return make_char_parser('{') <
-        separated_by(key_value_parser(),
-                     skip_whitespace() < make_char_parser(','),
-                     [] () { return std::size_t{1}; }, std::plus<>{})
+        separated_by_val(key_value_parser(),
+                         skip_whitespace() < make_char_parser(','),
+                         std::size_t{1}, std::plus<>{})
         > skip_whitespace()
         > (make_char_parser('}') | fail('}', [] { throw "expected }"; }));
     }
@@ -353,20 +352,18 @@ namespace JSON
     static constexpr auto value_parser()
     {
       using namespace std::literals;
-      return [] (const auto& sv) {
-               // deduce the return type of this lambda
-               if (false) return fail(std::size_t{})(sv);
-               constexpr auto p =
-                 fmap([] (auto) -> std::size_t { return 0; },
-                      make_string_parser("true"sv) | make_string_parser("false"sv)
-                      | make_string_parser("null"sv))
-                 | fmap([] (auto) -> std::size_t { return 0; },
-                        number_parser())
-                 | string_size_parser()
-                 | array_parser()
-                 | object_parser();
-               return (skip_whitespace() < p)(sv);
-             };
+      return [] (const auto& sv) -> parse_result_t<std::size_t> {
+        constexpr auto p =
+          fmap([] (auto) -> std::size_t { return 0; },
+               make_string_parser("true"sv) | make_string_parser("false"sv)
+               | make_string_parser("null"sv))
+          | fmap([] (auto) -> std::size_t { return 0; },
+                 number_parser())
+          | string_size_parser()
+          | array_parser()
+          | object_parser();
+        return (skip_whitespace() < p)(sv);
+      };
     }
 
     // parse a JSON array
@@ -418,8 +415,7 @@ namespace JSON
 
   //----------------------------------------------------------------------------
   // JSON extent parser
-  // Everything returns a monostate: we only need the extent which we can
-  // calculate from the leftover part
+  // Returns the string_view that represents the value literal
 
   template <std::size_t = 0>
   struct extent_recur
@@ -429,21 +425,23 @@ namespace JSON
     static constexpr auto value_parser()
     {
       using namespace std::literals;
-      return [] (const auto& sv) {
-               // deduce the return type of this lambda
-               if (false) return fail(std::monostate{})(sv);
-               constexpr auto p =
-                 fmap([] (auto) { return std::monostate{}; },
-                      make_string_parser("true"sv) | make_string_parser("false"sv)
-                      | make_string_parser("null"sv))
-                 | fmap([] (auto) { return std::monostate{}; },
-                        number_parser())
-                 | fmap([] (auto) { return std::monostate{}; },
-                        string_parser())
-                 | array_parser()
-                 | object_parser();
-               return (skip_whitespace() < p)(sv);
-             };
+      using R = parse_result_t<std::string_view>;
+      return [] (const auto& sv) -> R {
+        constexpr auto p =
+          fmap([] (auto) { return std::monostate{}; },
+               make_string_parser("true"sv) | make_string_parser("false"sv)
+               | make_string_parser("null"sv))
+          | fmap([] (auto) { return std::monostate{}; },
+                 number_parser())
+          | fmap([] (auto) { return std::monostate{}; },
+                 string_parser())
+          | array_parser()
+          | object_parser();
+        auto r = (skip_whitespace() < p)(sv);
+        if (!r) return std::nullopt;
+        std::size_t len = static_cast<std::size_t>(r->second.data() - sv.data());
+        return R(cx::make_pair(std::string_view{sv.data(), len}, r->second));
+      };
     }
 
     // parse a JSON array
@@ -454,8 +452,7 @@ namespace JSON
         separated_by_val(value_parser(),
                          skip_whitespace() < make_char_parser(','),
                          std::monostate{}, [] (auto x, auto) { return x; })
-        > skip_whitespace()
-        > make_char_parser(']');
+          > skip_whitespace() > make_char_parser(']');
     }
 
     // parse a JSON object
@@ -463,8 +460,7 @@ namespace JSON
     static constexpr auto key_value_parser()
     {
       return skip_whitespace() < string_parser()
-        < skip_whitespace() < make_char_parser(':')
-        < value_parser();
+        < skip_whitespace() < make_char_parser(':') < value_parser();
     }
 
     static constexpr auto object_parser()
@@ -473,8 +469,7 @@ namespace JSON
         separated_by_val(key_value_parser(),
                          skip_whitespace() < make_char_parser(','),
                          std::monostate{}, [] (auto x, auto) { return x; })
-        > skip_whitespace()
-        > make_char_parser('}');
+          > skip_whitespace() > make_char_parser('}');
     }
 
   };
@@ -486,95 +481,136 @@ namespace JSON
   // JSON parser
 
   // parse into a vector
-  // return the index into the vector resulting from the parsed value
+  // return the past-the-end index into the vector resulting from parsing
 
   template <std::size_t NObj, std::size_t NString>
   struct value_recur
   {
-    using V = cx::vector<value, NObj>;
+    using V = value[NObj];
     using S = cx::basic_string<char, NString>;
 
     // parse a JSON value
 
-    static constexpr auto value_parser(V& v, S& s)
+    // note idx and max are const refs here because otherwise they are "not a
+    // constant expression"?
+    // idx is the index of the thing we're currently parsing
+    // max is the one-past-the-end index into the vector (ie. where it can grow)
+    static constexpr auto value_parser(V& v, S& s,
+                                       const std::size_t& idx,
+                                       const std::size_t& max)
     {
       using namespace std::literals;
-      return [&] (const auto& sv) {
-               // deduce the return type of this lambda
-               if (false) return fail(std::size_t{})(sv);
-               const auto p =
-                 fmap([&] (auto) { v.push_back(value(true)); return v.size()-1; },
-                      make_string_parser("true"sv))
-                 | fmap([&] (auto) { v.push_back(value(false)); return v.size()-1; },
-                      make_string_parser("false"sv))
-                 | fmap([&] (auto) { v.push_back(value(std::monostate{})); return v.size()-1; },
-                        make_string_parser("null"sv))
-                 | fmap([&] (double d) { v.push_back(value(d)); return v.size()-1; },
-                        number_parser())
-                 | fmap([&] (const cx::string& str) {
-                          auto offset = s.size();
-                          cx::copy(str.cbegin(), str.cend(),
-                                   cx::back_insert_iterator(s));
-                          value::ExternalString es { offset, s.size() - offset };
-                          v.push_back(value(es));
-                          return v.size()-1;
-                        },
-                        string_parser())
-                 | (make_char_parser('[') < array_parser(v, s))
-                 | (make_char_parser('{') < object_parser(v, s));
-               return (skip_whitespace() < p)(sv);
-             };
+      return [&] (const auto& sv) -> parse_result_t<std::size_t> {
+        const auto p =
+          fmap([&] (auto) { v[idx].to_Boolean() = true; return max; },
+               make_string_parser("true"sv))
+          | fmap([&] (auto) { v[idx].to_Boolean() = false; return max; },
+             make_string_parser("false"sv))
+          | fmap([&] (auto) { v[idx].to_Null(); return max; },
+               make_string_parser("null"sv))
+          | fmap([&] (double d) { v[idx].to_Number() = d; return max; },
+               number_parser())
+          | fmap([&] (const cx::string& str) {
+                 auto offset = s.size();
+                 cx::copy(str.cbegin(), str.cend(),
+                          cx::back_insert_iterator(s));
+                 v[idx].to_String() =
+                   value::ExternalView{ offset, s.size() - offset };
+                 return max;
+               },
+               string_parser())
+          | (make_char_parser('[') < array_parser(v, s, idx, max))
+          | (make_char_parser('{') < object_parser(v, s, idx, max))
+        ;
+        return (skip_whitespace() < p)(sv);
+      };
     }
 
     // parse a JSON array
 
-    static constexpr auto array_parser(V& v, S& s)
+    static constexpr auto array_parser(V& v, S& s,
+                                       const std::size_t& idx,
+                                       const std::size_t& max)
     {
-      return [&] (const auto& sv) {
-               value val{};
-               val.to_Array();
-               v.push_back(std::move(val));
-               const auto p = separated_by_val(
-                   value_parser(v, s), skip_whitespace() < make_char_parser(','),
-                   v.size()-1,
-                   [&] (std::size_t arr_idx, std::size_t element_idx) {
-                     v[arr_idx].to_Array().push_back(element_idx);
-                     return arr_idx;
-                   }) > skip_whitespace() > make_char_parser(']');
-               return p(sv);
-             };
+      using R = parse_result_t<std::size_t>;
+      return [&] (const auto& sv) -> R {
+        // parse the extent of each subvalue and put it into storage to
+        // be parsed later
+        const auto p = separated_by_val(
+            extent_parser(), skip_whitespace() < make_char_parser(','),
+            std::size_t{max}, [&] (std::size_t i, const std::string_view& extent) {
+                 v[i].to_Unparsed() = extent;
+                 return i+1;
+               })
+          > skip_whitespace() > make_char_parser(']');
+        auto r = p(sv);
+        if (!r) return std::nullopt;
+        // set up the array value
+        v[idx].to_Array() =
+          value::ExternalView{ max, r->first - max };
+        // now properly parse the subvalues
+        std::size_t m = r->first;
+        for (auto i = max; i < r->first; ++i) {
+          auto subr = value_parser(v, s, i, m)(v[i].to_Unparsed());
+          if (!subr) return std::nullopt;
+          m = subr->first;
+        }
+        // finally return the current extent of the storage
+        return R(cx::make_pair(m, r->second));
+      };
     }
 
     // parse a JSON object
 
-    static constexpr auto key_value_parser(V& v, S& s)
+    struct kv_extent
+    {
+      cx::string key;
+      std::string_view value;
+    };
+
+    // parse a key-value pair as the string key and the extent of the value
+    static constexpr auto key_value_extent_parser()
     {
       constexpr auto p =
         skip_whitespace() < string_parser() > skip_whitespace() > make_char_parser(':');
       return bind(p,
-                  [&] (const cx::string& str, const auto& sv) {
-                    return fmap([&] (std::size_t idx) {
-                                  return cx::make_pair(str, idx);
+                  [] (const cx::string& key, const auto& sv) {
+                    return fmap([&] (const std::string_view& value) {
+                                  return kv_extent{ key, value };
                                 },
-                      value_parser(v, s))(sv);
+                      extent_parser())(sv);
                   });
     }
 
-    static constexpr auto object_parser(V& v, S& s)
+    static constexpr auto object_parser(V& v, S& s,
+                                        const std::size_t& idx,
+                                        const std::size_t& max)
     {
-      return [&] (const auto& sv) {
-               value val{};
-               val.to_Object();
-               v.push_back(std::move(val));
-               const auto p = separated_by_val(
-                   key_value_parser(v, s), skip_whitespace() < make_char_parser(','),
-                   v.size()-1,
-                   [&] (std::size_t obj_idx, const auto& kv) {
-                     v[obj_idx].to_Object()[kv.first] = kv.second;
-                     return obj_idx;
-                   }) > skip_whitespace() > make_char_parser('}');
-               return p(sv);
-             };
+      using R = parse_result_t<std::size_t>;
+      return [&] (const auto& sv) -> R {
+        // parse the extent of each subvalue and put it into storage to
+        // be parsed later
+        const auto p = separated_by_val(
+            key_value_extent_parser(), skip_whitespace() < make_char_parser(','),
+            std::size_t{max}, [&] (std::size_t i, const auto& kve) {
+                v[i].to_Unparsed() = kve.value;
+                v[idx].to_Object()[kve.key] = i;
+                return i+1;
+            }) > skip_whitespace() > make_char_parser('}');
+        auto r = p(sv);
+        if (!r) return std::nullopt;
+        // set up the object value
+        v[idx].to_Object();
+        // now properly parse the subvalues
+        std::size_t m = r->first;
+        for (auto i = max; i < r->first; ++i) {
+          auto subr = value_parser(v, s, i, m)(v[i].to_Unparsed());
+          if (!subr) return std::nullopt;
+          m = subr->first;
+        }
+        // finally return the current extent of the storage
+        return R(cx::make_pair(m, r->second));
+      };
     }
 
   };
@@ -586,7 +622,8 @@ namespace JSON
   {
     constexpr value_wrapper(parse_input_t s)
     {
-      value_recur<NumObjects, StringSize>::value_parser(object_storage, string_storage)(s);
+      value_recur<NumObjects, StringSize>::value_parser(
+          object_storage, string_storage, 0, 1)(s);
     }
 
     constexpr operator value_proxy<NumObjects, const cx::vector<value, NumObjects>,
@@ -608,6 +645,9 @@ namespace JSON
     constexpr auto operator[](const K& s) {
       return value_proxy{0, object_storage, string_storage}[s];
     }
+    constexpr auto object_Size() const {
+      return value_proxy{0, object_storage, string_storage}.object_Size();
+    }
 
     constexpr auto operator[](std::size_t idx) const {
       return value_proxy{0, object_storage, string_storage}[idx];
@@ -615,21 +655,31 @@ namespace JSON
     constexpr auto operator[](std::size_t idx) {
       return value_proxy{0, object_storage, string_storage}[idx];
     }
+    constexpr auto array_Size() const {
+      return value_proxy{0, object_storage, string_storage}.array_Size();
+    }
 
     constexpr auto is_Null() const { return object_storage[0].is_Null(); }
+
     constexpr decltype(auto) to_String() const {
       return value_proxy{0, object_storage, string_storage}.to_String();
     }
     constexpr decltype(auto) to_String() {
       return value_proxy{0, object_storage, string_storage}.to_String();
     }
+    constexpr auto string_Size() const {
+      return value_proxy{0, object_storage, string_storage}.string_Size();
+    }
+
     constexpr decltype(auto) to_Number() const { return object_storage[0].to_Number(); }
     constexpr decltype(auto) to_Number() { return object_storage[0].to_Number(); }
+
     constexpr decltype(auto) to_Boolean() const { return object_storage[0].to_Boolean(); }
     constexpr decltype(auto) to_Boolean() { return object_storage[0].to_Boolean(); }
 
   private:
-    cx::vector<value, NumObjects> object_storage;
+    // when this is a cx::vector, GCC ICEs...
+    value object_storage[NumObjects];
     cx::basic_string<char, StringSize> string_storage;
   };
 

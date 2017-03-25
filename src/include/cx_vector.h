@@ -82,6 +82,21 @@ namespace cx
       }
     }
 
+    constexpr const Value &back() const {
+      if (empty()) {
+        throw std::range_error("Index past end of vector");
+      } else {
+        return m_data[0];
+      }
+    }
+    constexpr Value &back() {
+      if (empty()) {
+        throw std::range_error("Index past end of vector");
+      } else {
+        return m_data[0];
+      }
+    }
+
     constexpr auto capacity() const { return Size; }
     constexpr auto size() const { return m_size; }
     constexpr auto empty() const { return m_size == 0; }

@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstddef>
+#include <string_view>
 
 #include "cx_vector.h"
 
@@ -55,10 +56,18 @@ namespace cx
       : vector<CharType, Size>(s.begin(), s.end())
     {
     }
+    constexpr basic_string(const std::string_view &s)
+      : vector<CharType, Size>(s.cbegin(), s.cend())
+    {
+    }
 
     constexpr basic_string() = default;
 
     constexpr basic_string &operator=(const static_string &s) {
+      return *this = basic_string(s);
+    }
+
+    constexpr basic_string &operator=(const std::string_view &s) {
       return *this = basic_string(s);
     }
 

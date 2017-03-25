@@ -16,7 +16,6 @@ namespace JSON
 
   struct value
   {
-    static constexpr size_t max_vector_size{6};
     static constexpr size_t max_map_size{6};
 
     // Using a transparent comparison operator on the map will allow us to index
@@ -45,7 +44,7 @@ namespace JSON
       }
     };
 
-    struct ExternalString
+    struct ExternalView
     {
       std::size_t offset;
       std::size_t extent;
@@ -55,8 +54,8 @@ namespace JSON
     {
       std::string_view unparsed;
       cx::map<cx::string, std::size_t, max_map_size, StringCompare> object;
-      cx::vector<std::size_t, max_vector_size> array;
-      ExternalString external_string;
+      ExternalView external_array;
+      ExternalView external_string;
       double number;
       bool boolean;
     };
@@ -77,6 +76,11 @@ namespace JSON
 
     constexpr value() = default;
 
+    constexpr value(const std::string_view& extent) {
+      type = Type::Unparsed;
+      data.unparsed = extent;
+    }
+
     constexpr value(const double t_d) {
       to_Number() = t_d;
     }
@@ -89,23 +93,8 @@ namespace JSON
       type = Type::Null;
     }
 
-    constexpr value(ExternalString t_s) {
+    constexpr value(ExternalView t_s) {
       to_String() = std::move(t_s);
-    }
-
-    constexpr decltype(auto) to_Array() const
-    {
-      assert_type(Type::Array);
-      return (data.array);
-    }
-
-    constexpr decltype(auto) to_Array()
-    {
-      if (type != Type::Array) {
-        type = Type::Array;
-        data.array = {};
-      }
-      return (data.array);
     }
 
     constexpr decltype(auto) to_Object() const
@@ -123,6 +112,12 @@ namespace JSON
       return (data.object);
     }
 
+    constexpr auto object_Size() const
+    {
+      assert_type(Type::Object);
+      return 0; // for now, we don't know
+    }
+
     constexpr void assert_type(Type t) const
     {
       if (type != t) throw std::runtime_error("Incorrect type");
@@ -133,19 +128,66 @@ namespace JSON
       return type == Type::Null;
     }
 
-    constexpr const ExternalString& to_String() const
+    constexpr void to_Null()
+    {
+      type = Type::Null;
+    }
+
+    constexpr const std::string_view& to_Unparsed() const
+    {
+      assert_type(Type::Unparsed);
+      return data.unparsed;
+    }
+
+    constexpr std::string_view& to_Unparsed()
+    {
+      if (type != Type::Unparsed) {
+        type = Type::Unparsed;
+        data.unparsed = {0,0};
+      }
+      return data.unparsed;
+    }
+
+    constexpr const ExternalView& to_Array() const
+    {
+      assert_type(Type::Array);
+      return data.external_array;
+    }
+
+    constexpr ExternalView& to_Array()
+    {
+      if (type != Type::Array) {
+        type = Type::Array;
+        data.external_array = {0,0};
+      }
+      return data.external_array;
+    }
+
+    constexpr auto array_Size() const
+    {
+      assert_type(Type::Array);
+      return data.external_array.extent;
+    }
+
+    constexpr const ExternalView& to_String() const
     {
       assert_type(Type::String);
       return data.external_string;
     }
 
-    constexpr ExternalString& to_String()
+    constexpr ExternalView& to_String()
     {
       if (type != Type::String) {
         type = Type::String;
         data.external_string = {0,0};
       }
       return data.external_string;
+    }
+
+    constexpr auto string_Size() const
+    {
+      assert_type(Type::String);
+      return data.external_string.extent;
     }
 
     constexpr const double& to_Number() const
@@ -196,17 +238,26 @@ namespace JSON
       auto idx = object_storage[index].to_Object().at(s);
       return value_proxy{idx, object_storage, string_storage};
     }
+    constexpr auto object_Size() const {
+      return object_storage[index].object_Size();
+    }
 
     constexpr auto operator[](std::size_t idx) const {
-      auto i = object_storage[index].to_Array()[idx];
-      return value_proxy{i, object_storage, string_storage};
+      auto& ext = object_storage[index].to_Array();
+      if (idx > ext.extent) throw std::runtime_error("Index past end of array");
+      return value_proxy{ext.offset + idx, object_storage, string_storage};
     }
     constexpr auto operator[](std::size_t idx) {
-      auto i = object_storage[index].to_Array()[idx];
-      return value_proxy{i, object_storage, string_storage};
+      auto& ext = object_storage[index].to_Array();
+      if (idx > ext.extent) throw std::runtime_error("Index past end of array");
+      return value_proxy{ext.offset + idx, object_storage, string_storage};
+    }
+    constexpr auto array_Size() const {
+      return object_storage[index].array_Size();
     }
 
     constexpr auto is_Null() const { return object_storage[index].is_Null(); }
+
     constexpr auto to_String() const {
       auto s = object_storage[index].to_String();
       return cx::static_string { &string_storage[s.offset], s.extent };
@@ -215,8 +266,14 @@ namespace JSON
       auto s = object_storage[index].to_String();
       return cx::static_string { &string_storage[s.offset], s.extent };
     }
+    constexpr auto string_Size() const {
+      return object_storage[index].string_Size();
+    }
+
+
     constexpr decltype(auto) to_Number() const { return object_storage[index].to_Number(); }
     constexpr decltype(auto) to_Number() { return object_storage[index].to_Number(); }
+
     constexpr decltype(auto) to_Boolean() const { return object_storage[index].to_Boolean(); }
     constexpr decltype(auto) to_Boolean() { return object_storage[index].to_Boolean(); }
 
@@ -226,15 +283,15 @@ namespace JSON
   };
 
   template <size_t NumObjects, size_t StringSize>
-  value_proxy(std::size_t i, const cx::vector<value, NumObjects>& v,
+  value_proxy(std::size_t i, const value(&v)[NumObjects],
               const cx::basic_string<char, StringSize>& s)
-    -> value_proxy<NumObjects, const cx::vector<value, NumObjects>,
+    -> value_proxy<NumObjects, const value(&)[NumObjects],
                    const cx::basic_string<char, StringSize>>;
 
   template <size_t NumObjects, size_t StringSize>
-  value_proxy(std::size_t i, cx::vector<value, NumObjects>& v,
+  value_proxy(std::size_t i, value(&v)[NumObjects],
               cx::basic_string<char, StringSize>& s)
-    -> value_proxy<NumObjects, cx::vector<value, NumObjects>,
+    -> value_proxy<NumObjects, value(&)[NumObjects],
                    cx::basic_string<char, StringSize>>;
 
 }
