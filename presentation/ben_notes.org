@@ -169,3 +169,37 @@ current position and the leftover position.
 
 If we have a way to cheaply skip to-be-parsed objects, perhaps we have the
 ability to do lazy parsing.
+
+*** Externalizing arrays
+The extent parser returns the string_view representing the value text.
+
+The value parser as a whole returns the used size of the external storage (i.e.
+the past-the-end index).
+
+When parsing a value, we need to know the used size of the external storage and
+the index of the current value we're parsing. Initially, these values are 1 and
+0 (an empty value - note not an empty object/array/string/etc - is illegal).
+
+When we parse an array of values, the current value index becomes the array
+value. We then parse the extents of the subvalues, and effectively push_back
+unparsed values into the storage. Then we can go back to the array value and
+fill in its offset and extent. Then we can reparse all the stored subvalues in
+order, keeping track of the past-the-end index resulting from each parse.
+
+** Surfacing parsing errors
+
+The best place to do this is in the numobjects parser, assuming that's the first
+pass through the value literal.
+
+A compile error can be produced by using throw, but it's hard to get an actual
+string in the compiler output (other than just showing the line of the error).
+
+There are a few different errors:
+ - missing close ] on array
+ - missing close } on object
+ - wrong key type (not string) on object value
+ - missing : separating key and value in object value
+
+Of these the first two are easy at least to indentify the point in the parsing
+machinery where they can be raised. The last two are harder to give errors for
+without compromising the ability to parse empty objects ({}).
