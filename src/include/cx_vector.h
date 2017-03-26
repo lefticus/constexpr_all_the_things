@@ -86,14 +86,14 @@ namespace cx
       if (empty()) {
         throw std::range_error("Index past end of vector");
       } else {
-        return m_data[0];
+        return m_data[m_size - 1];
       }
     }
     constexpr Value &back() {
       if (empty()) {
         throw std::range_error("Index past end of vector");
       } else {
-        return m_data[0];
+        return m_data[m_size - 1];
       }
     }
 
