@@ -7,6 +7,7 @@
   - `mismatch`
   - `equal`
   - `copy`
+  - `move` (not the cast operator) - interesting side note, `std::make_move_iterator` *is* `constexpr` in c++17
 * `std::optional` 
   - Gets the hard part right: it's trivially destructable if the contained type is
   - However, gets everything else wrong - non-`constexpr` copy/move/assignment
@@ -22,6 +23,62 @@
 * Tests are surprisingly easy. There's no risk of something going wrong at runtime, if a test compiles, it worked!
 * What about use cases for mixed-mode `constexpr` with fixed-size storage that optionally expands (is Eric Neibler around? He worked on this with his string class)
 * Compile times are tricky to manage, but it could be worse. The hard part - which Ben will speak about - is building / flattening trees. Really this is not a `constexpr` issue, but a template issue in our cases.
+
+# Allocators
+
+* It should be possible to make a `constexpr` allocator, and containers that support both `constexpr` and not allocators
+
+This comes with some difficulties, however.
+
+* Placement `new` is not supported in `constexpr` (but this is something other people have been discussing)
+* But this is largely irrelevant anyhow, as with `constexpr` data the contained thing must have already been allocated anyhow
+* But this requires care to choose placement `new` when required, and not otherwise
+* Growing the container is difficult because there really does not exist scratch allocator space since we are working with a very limited size storage that must be known at compile time
+* This suggests some amount of awareness of the part of the container to allocate as much as it can up front, for a fixed-size allocator
+* Cleaning up becomes almost impossible because a non-trivial destructor is impossible. This would mean that we need some kind of non-`constexpr` allocator wrapper that can clean up allocated memory on exit
+* This should be possible, but adds some more complexity, but should work in the same way that `std::variant`'s `constexpr` destructor does
+
+How to make a constexpr-safe destructor:
+
+```cpp
+#include <type_traits>
+#include <memory>
+
+
+template<typename Derived>
+struct CleanUp
+{
+  ~CleanUp() {
+    static_cast<Derived *>(this)->cleanup();
+  }
+};
+
+template<typename Derived>
+struct CleanUpTrivial
+
+{
+  // nothing to do!
+};
+
+template<typename T>
+struct Container : std::conditional_t<
+                                      std::is_trivially_destructible_v<T>, 
+                                      CleanUpTrivial<Container<T>>, 
+                                      CleanUp<Container<T>>
+                                     >
+{
+  void cleanup() {
+    // do cleanup stuff
+  }
+};
+
+int main()
+{
+  static_assert(std::is_trivially_destructible_v<Container<int>>);
+  static_assert(!std::is_trivially_destructible_v<Container<std::unique_ptr<int>>>);
+}
+```
+
 
 # The Future
 
