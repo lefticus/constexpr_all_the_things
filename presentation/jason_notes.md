@@ -14,8 +14,8 @@
   - Making it functionally useless in a `constexpr` context
 * `std::variant`
   - See `std::optional`
-* `map` and `vector` is easy to implement, even with iterator support. The only thing that makes it hard deciding the size ahead of time. 
-* I personally found the `static_string` class for a fixed-size wrapper around a `char *` literal to be very helpful. It is like a `string_view` but with more restrictions so you know you can store it (I think) 
+* `map` and `vector` is easy to implement, even with iterator support. The only thing that makes it hard is deciding the size ahead of time. 
+* I personally found the `static_string` class for a fixed-size wrapper around a `char *` literal to be very helpful. It is like a `string_view` but with more restrictions so you know you can store it (I think). I believe there's a proposal floating around similar to this.
  
 # General Notes
  
@@ -37,6 +37,7 @@ This comes with some difficulties, however.
 * This suggests some amount of awareness of the part of the container to allocate as much as it can up front, for a fixed-size allocator
 * Cleaning up becomes almost impossible because a non-trivial destructor is impossible. This would mean that we need some kind of non-`constexpr` allocator wrapper that can clean up allocated memory on exit
 * This should be possible, but adds some more complexity, but should work in the same way that `std::variant`'s `constexpr` destructor does
+* What would be awesome is if an empty, but user defined, destructor could be considered "trivial" for the purposes of `constexpr`. This would allow us to `if constexpr` out the body of the destructor when possible
 
 How to make a constexpr-safe destructor:
 
