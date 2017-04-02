@@ -262,28 +262,46 @@ namespace JSON
   }
 
   //----------------------------------------------------------------------------
-  // JSON number-of-objects-required parser
+  // JSON number-of-objects-required and string-size-required parser
+  //
   // An array is 1 + number of objects in the array
   // An object is 1 + number of objects in the object + 1 for each key
   // Anything else is just 1
+  //
+  // A string is its own size
+  // An array is the sum of value sizes within it
+  // An object is the sum of key sizes and value sizes within it
+  // Anything else is just 0
+
+  struct Sizes
+  {
+    std::size_t num_objects;
+    std::size_t string_size;
+  };
+
+  constexpr Sizes operator+(const Sizes& x, const Sizes& y)
+  {
+    return {x.num_objects + y.num_objects,
+            x.string_size + y.string_size};
+  }
 
   template <std::size_t = 0>
-  struct numobjects_recur
+  struct sizes_recur
   {
     // parse a JSON value
 
     static constexpr auto value_parser()
     {
       using namespace std::literals;
-      return [] (const auto& sv) -> parse_result_t<std::size_t> {
+      return [] (const auto& sv) -> parse_result_t<Sizes> {
         constexpr auto p =
-          fmap([] (auto) -> std::size_t { return 1; },
+          fmap([] (auto) { return Sizes{1, 0}; },
                make_string_parser("true"sv) | make_string_parser("false"sv)
                | make_string_parser("null"sv))
-          | fmap([] (auto) -> std::size_t { return 1; },
+          | fmap([] (auto) { return Sizes{1, 0}; },
                  number_parser())
-        | fmap([] (auto) -> std::size_t { return 1; },
-               string_parser())
+        | fmap([] (std::size_t len) { return Sizes{1, len}; },
+               string_size_parser())
         | array_parser()
         | object_parser();
         return (skip_whitespace() < p)(sv);
@@ -297,7 +315,7 @@ namespace JSON
       return make_char_parser('[') <
         separated_by_val(value_parser(),
                          skip_whitespace() < make_char_parser(','),
-                         std::size_t{1}, std::plus<>{})
+                         Sizes{1, 0}, std::plus<>{})
         > skip_whitespace()
         > (make_char_parser(']') | fail(']', [] { throw "expected ]"; }));
     }
@@ -309,87 +327,14 @@ namespace JSON
       // would like to give sensible errors here about expecting ':' or
       // expecting string key, but this parser needs to be able to fail without
       // error to deal with empty objects ({})
-      return skip_whitespace()
-        < string_parser()
-        < skip_whitespace()
-        < make_char_parser(':')
-        < value_parser();
-    }
-
-    static constexpr auto object_parser()
-    {
-      return make_char_parser('{') <
-        separated_by_val(key_value_parser(),
-                         skip_whitespace() < make_char_parser(','),
-                         std::size_t{1},
-                         [] (auto sofar, auto n) { return sofar + n + 1; })
-        > skip_whitespace()
-        > (make_char_parser('}') | fail('}', [] { throw "expected }"; }));
-    }
-
-  };
-
-  // provide the num objects parser outside the struct qualification
-  constexpr auto numobjects_parser = numobjects_recur<>::value_parser;
-
-  template <char... Cs>
-  constexpr auto numobjects()
-  {
-    std::initializer_list<char> il{Cs...};
-    return numobjects_parser()(std::string_view(il.begin(), il.size()))->first;
-  }
-
-  //----------------------------------------------------------------------------
-  // JSON string-size-required parser
-  // A string is its own size
-  // An array is the sum of value sizes within it
-  // An object is the sum of key sizes and value sizes within it
-  // Anything else is just 0
-
-  template <std::size_t = 0>
-  struct stringsize_recur
-  {
-    // parse a JSON value
-
-    static constexpr auto value_parser()
-    {
-      using namespace std::literals;
-      return [] (const auto& sv) -> parse_result_t<std::size_t> {
-        constexpr auto p =
-          fmap([] (auto) -> std::size_t { return 0; },
-               make_string_parser("true"sv) | make_string_parser("false"sv)
-               | make_string_parser("null"sv))
-          | fmap([] (auto) -> std::size_t { return 0; },
-                 number_parser())
-          | string_size_parser()
-          | array_parser()
-          | object_parser();
-        return (skip_whitespace() < p)(sv);
-      };
-    }
-
-    // parse a JSON array
-
-    static constexpr auto array_parser()
-    {
-      return make_char_parser('[') <
-        separated_by_val(value_parser(),
-                         skip_whitespace() < make_char_parser(','),
-                         std::size_t{0}, std::plus<>{})
-        > skip_whitespace()
-        > make_char_parser(']');
-    }
-
-    // parse a JSON object
-
-    static constexpr auto key_value_parser()
-    {
       constexpr auto p =
         skip_whitespace() < string_size_parser() > skip_whitespace() > make_char_parser(':');
       return bind(p,
-                  [&] (std::size_t s1, const auto& sv) {
-                    return fmap([s1] (std::size_t s2) { return s1 + s2; },
-                                value_parser())(sv);
+                  [&] (std::size_t len, const auto& sv) {
+                    return fmap(
+                        [len] (const Sizes& s) {
+                          return Sizes{s.num_objects + 1, s.string_size + len}; },
+                        value_parser())(sv);
                   });
     }
 
@@ -398,21 +343,21 @@ namespace JSON
       return make_char_parser('{') <
         separated_by_val(key_value_parser(),
                          skip_whitespace() < make_char_parser(','),
-                         std::size_t{}, std::plus<>{})
+                         Sizes{1, 0}, std::plus<>{})
         > skip_whitespace()
-        > make_char_parser('}');
+        > (make_char_parser('}') | fail('}', [] { throw "expected }"; }));
     }
 
   };
 
-  // provide the string size parser outside the struct qualification
-  constexpr auto stringsize_parser = stringsize_recur<>::value_parser;
+  // provide the sizes parser outside the struct qualification
+  constexpr auto sizes_parser = sizes_recur<>::value_parser;
 
   template <char... Cs>
-  constexpr auto stringsize()
+  constexpr auto sizes()
   {
     std::initializer_list<char> il{Cs...};
-    return stringsize_parser()(std::string_view(il.begin(), il.size()))->first;
+    return sizes_parser()(std::string_view(il.begin(), il.size()))->first;
   }
 
   //----------------------------------------------------------------------------
@@ -436,7 +381,7 @@ namespace JSON
           | fmap([] (auto) { return std::monostate{}; },
                  number_parser())
           | fmap([] (auto) { return std::monostate{}; },
-                 string_parser())
+                 string_size_parser())
           | array_parser()
           | object_parser();
         auto r = (skip_whitespace() < p)(sv);
@@ -461,7 +406,7 @@ namespace JSON
 
     static constexpr auto key_value_parser()
     {
-      return skip_whitespace() < string_parser()
+      return skip_whitespace() < string_size_parser()
         < skip_whitespace() < make_char_parser(':') < value_parser();
     }
 
@@ -694,6 +639,9 @@ namespace JSON
     constexpr decltype(auto) to_Boolean() const { return object_storage[0].to_Boolean(); }
     constexpr decltype(auto) to_Boolean() { return object_storage[0].to_Boolean(); }
 
+    constexpr auto num_objects() const { return NumObjects; }
+    constexpr auto string_size() const { return StringSize; }
+
   private:
     // when this is a cx::vector, GCC ICEs...
     value object_storage[NumObjects];
@@ -706,9 +654,11 @@ namespace JSON
     constexpr auto operator "" _json()
     {
       constexpr std::initializer_list<T> il{Ts...};
-      constexpr auto N = numobjects<Ts...>();
-      constexpr auto S = stringsize<Ts...>();
-      return value_wrapper<N, S>(std::string_view(il.begin(), il.size()));
+      // I tried using structured bindings here, but g++ says:
+      // "error: decomposition declaration cannot be declared 'constexpr'"
+      constexpr auto S = sizes<Ts...>();
+      return value_wrapper<S.num_objects, S.string_size>(
+          std::string_view(il.begin(), il.size()));
     }
   }
 

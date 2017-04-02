@@ -3,6 +3,7 @@
 #include <cx_json_parser.h>
 #include <cx_json_value.h>
 
+#include <iostream>
 #include <string_view>
 #include <tuple>
 
@@ -104,20 +105,20 @@ void numobjects_tests()
 {
   // test number of JSON objects parsing
   {
-    constexpr auto d = JSON::numobjects_parser()("true"sv);
-    static_assert(d && d->first == 1);
+    constexpr auto d = JSON::sizes_parser()("true"sv);
+    static_assert(d && d->first.num_objects == 1);
   }
   {
-    constexpr auto d = JSON::numobjects_parser()("[]"sv);
-    static_assert(d && d->first == 1);
+    constexpr auto d = JSON::sizes_parser()("[]"sv);
+    static_assert(d && d->first.num_objects == 1);
   }
   {
-    constexpr auto d = JSON::numobjects_parser()("[1,2,3,4]"sv);
-    static_assert(d && d->first == 5);
+    constexpr auto d = JSON::sizes_parser()("[1,2,3,4]"sv);
+    static_assert(d && d->first.num_objects == 5);
   }
   {
-    constexpr auto d = JSON::numobjects_parser()(R"({"a":1, "b":2})"sv);
-    static_assert(d && d->first == 5);
+    constexpr auto d = JSON::sizes_parser()(R"({"a":1, "b":2})"sv);
+    static_assert(d && d->first.num_objects == 5);
   }
 }
 
@@ -125,20 +126,20 @@ void stringsize_tests()
 {
   // test string size of JSON objects parsing
   {
-    constexpr auto d = JSON::string_size_parser()(R"("a")"sv);
-    static_assert(d && d->first == 1);
+    constexpr auto d = JSON::sizes_parser()(R"("a")"sv);
+    static_assert(d && d->first.string_size == 1);
   }
   {
-    constexpr auto d = JSON::stringsize_parser()("true"sv);
-    static_assert(d && d->first == 0);
+    constexpr auto d = JSON::sizes_parser()("true"sv);
+    static_assert(d && d->first.string_size == 0);
   }
   {
-    constexpr auto d = JSON::stringsize_parser()(R"(["a", "b"])"sv);
-    static_assert(d && d->first == 2);
+    constexpr auto d = JSON::sizes_parser()(R"(["a", "b"])"sv);
+    static_assert(d && d->first.string_size == 2);
   }
   {
-    constexpr auto d = JSON::stringsize_parser()(R"({"a":1, "b":2})"sv);
-    static_assert(d && d->first == 2);
+    constexpr auto d = JSON::sizes_parser()(R"({"a":1, "b":2})"sv);
+    static_assert(d && d->first.string_size == 2);
   }
 }
 
@@ -206,6 +207,12 @@ void simple_value_tests()
   {
     constexpr auto jsv = R"("hello")"_json;
     static_assert(jsv.to_String() == "hello");
+  }
+  {
+    // strings can be arbitrary size...
+    constexpr auto jsv = R"("01234567890123456789012345678901234567890123456789")"_json;
+    static_assert(jsv.to_String() == "01234567890123456789012345678901234567890123456789");
+    static_assert(jsv.string_size() == 50);
   }
 }
 
@@ -305,13 +312,27 @@ void object_value_tests()
     static_assert(jsv["z"].to_Number() == 26);
   }
   {
-    //what's the point of all this?
-    //constexpr can be used as template parameters!
+    // what's the point of all this?
 
+    // constexpr can be used as template parameters!
     constexpr auto jsv = R"({"a":0, "b":1})"_json;
-
     constexpr std::tuple<double, int> t{ 5.2, 33 };
     static_assert(std::get<int(jsv["b"].to_Number())>(t) == 33);
+
+    // configuration can be processed at compile time
+    // (this would be even better with file literals - P0373)
+    constexpr auto config = R"(
+      {
+        "feature-x-enabled": true
+      }
+    )"_json;
+    if constexpr (config["feature-x-enabled"].to_Boolean()) {
+      // do something
+      std::cout << "feature-x-enabled\n";
+    } else {
+      // do something else
+      std::cout << "feature-x-disabled\n";
+    }
   }
 }
 
