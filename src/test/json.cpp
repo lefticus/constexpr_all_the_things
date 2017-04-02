@@ -117,7 +117,7 @@ void numobjects_tests()
   }
   {
     constexpr auto d = JSON::numobjects_parser()(R"({"a":1, "b":2})"sv);
-    static_assert(d && d->first == 3);
+    static_assert(d && d->first == 5);
   }
 }
 
@@ -263,10 +263,12 @@ void object_value_tests()
   }
   {
     constexpr auto jsv = R"({"a":1})"_json;
+    static_assert(jsv.object_Size() == 1);
     static_assert(jsv["a"].to_Number() == 1);
   }
   {
     constexpr auto jsv = R"({"a":1, "b":true, "c":2})"_json;
+    static_assert(jsv.object_Size() == 3);
     static_assert(jsv["a"].to_Number() == 1);
     static_assert(jsv["b"].to_Boolean());
     static_assert(jsv["c"].to_Number() == 2);
@@ -292,6 +294,15 @@ void object_value_tests()
     static_assert(jsv[3][0].to_Number() == 2);
     static_assert(jsv[4]["a"].to_Number() == 3.14);
     static_assert(jsv[5].to_String() == "hello");
+  }
+  {
+    // objects can contain an arbitrary number of children...
+    constexpr auto jsv = R"({"a":1, "b":2, "c":3, "d":4, "e":5, "f":6,
+                             "g":7, "h":8, "i":9, "j":10,"k":11,"l":12,
+                             "m":13,"n":14,"o":15,"p":16,"q":17,"r":18,
+                             "s":19,"t":20,"u":21,"v":22,"w":23,"x":24,
+                             "y":25,"z":26})"_json;
+    static_assert(jsv["z"].to_Number() == 26);
   }
   {
     //what's the point of all this?

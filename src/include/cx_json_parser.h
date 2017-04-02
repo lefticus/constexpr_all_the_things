@@ -7,6 +7,7 @@
 #include <cx_string.h>
 
 #include <functional>
+#include <limits>
 #include <string_view>
 #include <type_traits>
 #include <variant>
@@ -263,7 +264,7 @@ namespace JSON
   //----------------------------------------------------------------------------
   // JSON number-of-objects-required parser
   // An array is 1 + number of objects in the array
-  // An object is 1 + number of objects in the object
+  // An object is 1 + number of objects in the object + 1 for each key
   // Anything else is just 1
 
   template <std::size_t = 0>
@@ -320,7 +321,8 @@ namespace JSON
       return make_char_parser('{') <
         separated_by_val(key_value_parser(),
                          skip_whitespace() < make_char_parser(','),
-                         std::size_t{1}, std::plus<>{})
+                         std::size_t{1},
+                         [] (auto sofar, auto n) { return sofar + n + 1; })
         > skip_whitespace()
         > (make_char_parser('}') | fail('}', [] { throw "expected }"; }));
     }
@@ -505,25 +507,39 @@ namespace JSON
           fmap([&] (auto) { v[idx].to_Boolean() = true; return max; },
                make_string_parser("true"sv))
           | fmap([&] (auto) { v[idx].to_Boolean() = false; return max; },
-             make_string_parser("false"sv))
+                 make_string_parser("false"sv))
           | fmap([&] (auto) { v[idx].to_Null(); return max; },
-               make_string_parser("null"sv))
+                 make_string_parser("null"sv))
           | fmap([&] (double d) { v[idx].to_Number() = d; return max; },
-               number_parser())
-          | fmap([&] (const cx::string& str) {
-                 auto offset = s.size();
-                 cx::copy(str.cbegin(), str.cend(),
-                          cx::back_insert_iterator(s));
-                 v[idx].to_String() =
-                   value::ExternalView{ offset, s.size() - offset };
-                 return max;
-               },
-               string_parser())
+                 number_parser())
+          | fmap([&] (const value::ExternalView& ev) {
+                   v[idx].to_String() = ev;
+                   return max;
+                 }, string_parser(s))
           | (make_char_parser('[') < array_parser(v, s, idx, max))
           | (make_char_parser('{') < object_parser(v, s, idx, max))
         ;
         return (skip_whitespace() < p)(sv);
       };
+    }
+
+    // a string parser which accumulates its string into external storage - we
+    // use the max value of size_t as a sentinel to lazily evaluate the
+    // beginning of the string... I'm not proud
+
+    static constexpr auto string_parser(S& s)
+    {
+      constexpr auto quote_parser = make_char_parser('"');
+      const auto str_parser =
+        many(string_char_parser(),
+             value::ExternalView{std::numeric_limits<std::size_t>::max(), 0},
+             [&] (auto ev, const auto& str) {
+               auto offset = ev.offset == std::numeric_limits<std::size_t>::max()
+                 ? s.size() : ev.offset;
+               cx::copy(str.cbegin(), str.cend(), cx::back_insert_iterator(s));
+               return value::ExternalView{offset, ev.extent + str.size()};
+             });
+      return quote_parser < str_parser > quote_parser;
     }
 
     // parse a JSON array
@@ -564,19 +580,19 @@ namespace JSON
 
     struct kv_extent
     {
-      cx::string key;
-      std::string_view value;
+      value::ExternalView key;
+      std::string_view val;
     };
 
     // parse a key-value pair as the string key and the extent of the value
-    static constexpr auto key_value_extent_parser()
+    static constexpr auto key_value_extent_parser(S& s)
     {
-      constexpr auto p =
-        skip_whitespace() < string_parser() > skip_whitespace() > make_char_parser(':');
+      const auto p =
+        skip_whitespace() < string_parser(s) > skip_whitespace() > make_char_parser(':');
       return bind(p,
-                  [] (const cx::string& key, const auto& sv) {
-                    return fmap([&] (const std::string_view& value) {
-                                  return kv_extent{ key, value };
+                  [] (const value::ExternalView& key, const auto& sv) {
+                    return fmap([&] (const std::string_view& val) {
+                                  return kv_extent{ key, val };
                                 },
                       extent_parser())(sv);
                   });
@@ -591,20 +607,21 @@ namespace JSON
         // parse the extent of each subvalue and put it into storage to
         // be parsed later
         const auto p = separated_by_val(
-            key_value_extent_parser(), skip_whitespace() < make_char_parser(','),
+            key_value_extent_parser(s), skip_whitespace() < make_char_parser(','),
             std::size_t{max}, [&] (std::size_t i, const auto& kve) {
-                v[i].to_Unparsed() = kve.value;
-                v[idx].to_Object()[kve.key] = i;
-                return i+1;
+                v[i].to_String() = kve.key;
+                v[i+1].to_Unparsed() = kve.val;
+                return i+2;
             }) > skip_whitespace() > make_char_parser('}');
         auto r = p(sv);
         if (!r) return std::nullopt;
         // set up the object value
-        v[idx].to_Object();
+        v[idx].to_Object() =
+          value::ExternalView{ max, r->first - max };
         // now properly parse the subvalues
         std::size_t m = r->first;
-        for (auto i = max; i < r->first; ++i) {
-          auto subr = value_parser(v, s, i, m)(v[i].to_Unparsed());
+        for (auto i = max; i < r->first; i += 2) {
+          auto subr = value_parser(v, s, i+1, m)(v[i+1].to_Unparsed());
           if (!subr) return std::nullopt;
           m = subr->first;
         }

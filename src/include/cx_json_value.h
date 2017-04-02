@@ -16,34 +16,6 @@ namespace JSON
 
   struct value
   {
-    static constexpr size_t max_map_size{6};
-
-    // Using a transparent comparison operator on the map will allow us to index
-    // by any kind of "string" (cx::static_string, cx::string, etc)
-    struct StringCompare
-    {
-      using is_transparent = int;
-
-      template <typename S1, typename S2>
-      constexpr bool operator()(const S1& s1, const S2& s2) {
-        return cx::equal(std::cbegin(s1), std::cend(s1),
-                         std::cbegin(s2), std::cend(s2));
-      }
-
-      // const char arrays are tricky because their length includes the null
-      // terminator, so we use N-1 as the length
-      template <typename S1, std::size_t N>
-      constexpr bool operator()(const char (&s2)[N], const S1& s1) {
-        return cx::equal(std::cbegin(s1), std::cend(s1),
-                         s2, &s2[N-1]);
-      }
-      template <typename S1, std::size_t N>
-      constexpr bool operator()(const S1& s1, const char (&s2)[N]) {
-        return cx::equal(std::cbegin(s1), std::cend(s1),
-                         s2, &s2[N-1]);
-      }
-    };
-
     struct ExternalView
     {
       std::size_t offset;
@@ -53,7 +25,7 @@ namespace JSON
     union Data
     {
       std::string_view unparsed;
-      cx::map<cx::string, std::size_t, max_map_size, StringCompare> object;
+      ExternalView external_object;
       ExternalView external_array;
       ExternalView external_string;
       double number;
@@ -100,22 +72,24 @@ namespace JSON
     constexpr decltype(auto) to_Object() const
     {
       assert_type(Type::Object);
-      return (data.object);
+      return (data.external_object);
     }
 
     constexpr decltype(auto) to_Object()
     {
       if (type != Type::Object) {
         type = Type::Object;
-        data.object = {};
+        data.external_object = {0,0};
       }
-      return (data.object);
+      return (data.external_object);
     }
 
+    // objects are stored contiguously in storage as alternate string, value,
+    // string, value, etc
     constexpr auto object_Size() const
     {
       assert_type(Type::Object);
-      return 0; // for now, we don't know
+      return data.external_object.extent / 2;
     }
 
     constexpr void assert_type(Type t) const
@@ -226,17 +200,58 @@ namespace JSON
   template <size_t NumObjects, typename T, typename S>
   struct value_proxy
   {
+    // Using a transparent comparison operator will allow us to index by any
+    // kind of "string" (cx::static_string, cx::string, etc)
+    struct StringCompare
+    {
+      template <typename S1, typename S2>
+      constexpr bool operator()(const S1& s1, const S2& s2) {
+        return cx::equal(std::cbegin(s1), std::cend(s1),
+                         std::cbegin(s2), std::cend(s2));
+      }
+
+      // const char arrays are tricky because their length includes the null
+      // terminator, so we use N-1 as the length
+      template <typename S1, std::size_t N>
+      constexpr bool operator()(const char (&s2)[N], const S1& s1) {
+        return cx::equal(std::cbegin(s1), std::cend(s1),
+                         s2, &s2[N-1]);
+      }
+      template <typename S1, std::size_t N>
+      constexpr bool operator()(const S1& s1, const char (&s2)[N]) {
+        return cx::equal(std::cbegin(s1), std::cend(s1),
+                         s2, &s2[N-1]);
+      }
+    };
+
+    // the use of "notfound" in these functions serves no purpose; but if the
+    // throw expression is not guarded, it is evaluated, even though the
+    // function returns early and it should be unevaluated...
     template <typename K,
               std::enable_if_t<!std::is_integral<K>::value, int> = 0>
     constexpr auto operator[](const K& s) const {
-      auto idx = object_storage[index].to_Object().at(s);
-      return value_proxy{idx, object_storage, string_storage};
+      const auto& ext = object_storage[index].to_Object();
+      bool notfound = true;
+      for (auto i = ext.offset; i < ext.offset + ext.extent; i += 2) {
+        const auto& str = object_storage[i].to_String();
+        cx::static_string k { &string_storage[str.offset], str.extent };
+        if (StringCompare{}(k, s))
+          return value_proxy{i+1, object_storage, string_storage};
+      }
+      if (notfound) throw std::runtime_error("Key not found in object");
     }
     template <typename K,
               std::enable_if_t<!std::is_integral<K>::value, int> = 0>
     constexpr auto operator[](const K& s) {
-      auto idx = object_storage[index].to_Object().at(s);
-      return value_proxy{idx, object_storage, string_storage};
+      const auto& ext = object_storage[index].to_Object();
+      bool notfound = true;
+      for (auto i = ext.offset; i < ext.offset + ext.extent; i += 2) {
+        const auto& str = object_storage[i].to_String();
+        cx::static_string k { &string_storage[str.offset], str.extent };
+        if (StringCompare{}(k, s))
+          return value_proxy{i+1, object_storage, string_storage};
+      }
+      if (notfound) throw std::runtime_error("Key not found in object");
     }
     constexpr auto object_Size() const {
       return object_storage[index].object_Size();
@@ -269,7 +284,6 @@ namespace JSON
     constexpr auto string_Size() const {
       return object_storage[index].string_Size();
     }
-
 
     constexpr decltype(auto) to_Number() const { return object_storage[index].to_Number(); }
     constexpr decltype(auto) to_Number() { return object_storage[index].to_Number(); }
