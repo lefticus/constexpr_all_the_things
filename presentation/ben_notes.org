@@ -202,4 +202,71 @@ There are a few different errors:
 
 Of these the first two are easy at least to indentify the point in the parsing
 machinery where they can be raised. The last two are harder to give errors for
-without compromising the ability to parse empty objects ({}).
+without compromising the ability to parse empty objects/arrays ({} or []).
+
+** Final outcome
+
+The number-of-objects parser and the string-size parser have been merged
+together to obtain both values in one initial pass over the literal.
+
+(This revealed that structural bindings don't work with constexpr).
+
+Given that, two arrays can be sized properly to contain the totality of strings
+and objects.
+
+ - Using the externalization scheme outlined above, unparsed objects are
+   represented as string_views into the literal yet-to-be-parsed.
+ - Boolean, null and number values are represented inline in the JSON value.
+ - Strings are represented as string_views into the string storage.
+ - Arrays are represented as a view (offset + extent) into the object storage.
+ - Objects are represented as a view (offset + extent) into the object storage.
+   The values referenced alternate as keys and values. The keys are themselves
+   string values, so string_views into the string storage. The values are just
+   values of whatever type.
+
+Results:
+ - Parsing any value requires 2 passes.
+ - For objects and arrays, further passes are required to obtain the extents of
+   subvalues.
+ - Values are sized exactly at compile time.
+ - There are no coded restrictions on string length, array size or object size.
+   (There may be compiler limitations.)
+
+*** Parsing an array example
+
+Input: [1, 2, [3]]
+String size: 0
+Number of values: 5
+Resulting value layout:
+
+|--------------+------------+------------+--------------+------------|
+| 0            |          1 |          2 | 3            |          4 |
+|--------------+------------+------------+--------------+------------|
+| Array {1, 3} | Number {1} | Number {2} | Array {4, 1} | Number {3} |
+|--------------+------------+------------+--------------+------------|
+| [...]        |          1 |          2 | [...]        |          3 |
+|--------------+------------+------------+--------------+------------|
+
+*** Parsing an object example
+
+Input: { "a":1, "b":true, "c":["hello"]}
+String size: 8
+Number of values: 8
+
+Resulting string layout:
+
+|---+---+---+---+---+---+---+---|
+| 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+|---+---+---+---+---+---+---+---|
+| a | b | c | h | e | l | l | o |
+|---+---+---+---+---+---+---+---|
+
+Resulting value layout:
+
+|---------------+---------------+------------+--------------+----------------+--------------+--------------+--------------|
+| 0             | 1             |          2 | 3            | 4              | 5            | 6            | 7            |
+|---------------+---------------+------------+--------------+----------------+--------------+--------------+--------------|
+| Object {1, 6} | String {0, 1} | Number {1} | String {1,1} | Boolean {true} | String {2,1} | Array {7, 1} | String {3,5} |
+|---------------+---------------+------------+--------------+----------------+--------------+--------------+--------------|
+| {...}         | "a"           |          1 | "b"          | true           | "c"          | [...]        | "hello"      |
+|---------------+---------------+------------+--------------+----------------+--------------+--------------+--------------|
