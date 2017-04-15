@@ -1,0 +1,78 @@
+@font-face {
+    font-family: "Inconsolata";
+    font-style: normal;
+    font-weight: normal;
+    src: local("Inconsolata"), url("http://themes.googleusercontent.com/static/fonts/inconsolata/v3/BjAYBlHtW3CJxDcjzrnZCIbN6UDyHWBl620a-IRfuBk.woff") format("woff");
+}
+
+.reveal code {
+    font-family: Inconsolata;
+    text-transform: initial;
+    color: rgb(231, 173, 82);
+}
+
+.reveal a {
+    text-transform: initial;
+}
+
+.reveal pre {
+    font-family: Inconsolata;
+    font-size: 28px;
+}
+
+.org-src-container pre {
+    padding: 20px;
+    color: rgb(101,123,131);
+    background-color: #fdf6e3;
+}
+
+.reveal h2,
+.reveal h3 {
+    color: rgb(238, 238, 238);
+}
+
+#sec-title-slide h2,
+#sec-title-slide h3 {
+    font-size: 60px;
+    color: rgb(238, 238, 238);
+}
+
+.reveal .slide-number {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    font-family: Inconsolata;
+    font-size: 28px;
+    font-weight: bold;
+    color: rgb(231, 173, 82);
+    background-color: transparent;
+}
+
+.reveal .controls {
+    color: rgb(231, 173, 82);
+}
+
+.reveal .progress span {
+    background: rgb(231, 173, 82);
+}
+
+.reveal a {
+    color: rgb(231, 173, 82);
+}
+
+#left {
+  left:-8.33%;
+  text-align: left;
+  float: left;
+  width:50%;
+  z-index:-10;
+}
+
+#right {
+  left:31.25%;
+  top: 75px;
+  float: right;
+  text-align: right;
+  z-index:-10;
+  width:50%;
+}

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>constexpr ALL the things!</title>
+<meta name="author" content="(Ben Deane & Jason Turner)"/>
+<style type="text/css">
+.underline { text-decoration: underline; }
+</style>
+<link rel="stylesheet" href="./reveal.js/css/reveal.css"/>
+
+<link rel="stylesheet" href="./reveal.js/css/theme/blood.css" id="theme"/>
+
+<link rel="stylesheet" href="./presentation.css"/>
+
+<!-- If the query includes 'print-pdf', include the PDF print sheet -->
+<script>
+    if( window.location.search.match( /print-pdf/gi ) ) {
+        var link = document.createElement( 'link' );
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = './reveal.js/css/print/pdf.css';
+        document.getElementsByTagName( 'head' )[0].appendChild( link );
+    }
+</script>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+<section id="sec-title-slide"><img src="title.png"><h3>Ben Deane / <a href="mailto:bdeane@blizzard.com">bdeane@blizzard.com</a> / <a href="http://twitter.com/ben_deane">@ben_deane</a></h3><h3>Jason Turner / <a href="mailto:jason@emptycrate.com">jason@emptycrate.com</a> / <a href="http://twitter.com/lefticus">@lefticus</a></h3><h4>C++Now / Tuesday 16th May 2017</h4>
+</section>
+<script type="text/javascript" src="./presentation.js"></script>
+
+<section>
+<section id="slide-org965e3d2">
+<h2 id="org965e3d2">Not Burying The Lede</h2>
+<p>
+We want to do this:
+</p>
+
+<div class="org-src-container">
+
+<pre  class="src src-c++"><span style="color: #a020f0;">constexpr</span> <span style="color: #a020f0;">auto</span> <span style="color: #a0522d;">jsv</span>
+  = R<span style="color: #000000; background-color: #ffffff;">"</span><span style="color: #b22222;">({</span>
+<span style="color: #b22222;">        "feature-x-enabled": true,</span>
+<span style="color: #b22222;">        "value-of-y": 1729,</span>
+<span style="color: #b22222;">        "z-options": {"a": null,</span>
+<span style="color: #b22222;">                      "b": "joshua",</span>
+<span style="color: #b22222;">                      "c": [6, 28, 496]}</span>
+<span style="color: #b22222;">       })</span><span style="color: #000000; background-color: #ffffff;">"</span>_json;
+<span style="color: #a020f0;">if</span> <span style="color: #a020f0;">constexpr</span> <span style="color: #707183;">(</span>jsv<span style="color: #7388d6;">[</span><span style="color: #b22222;">"feature-x-enabled"</span><span style="color: #7388d6;">]</span><span style="color: #707183;">)</span> <span style="color: #707183;">{</span>
+  <span style="color: #bebebe;">// </span><span style="color: #bebebe;">code for feature x</span>
+<span style="color: #707183;">}</span> <span style="color: #a020f0;">else</span> <span style="color: #707183;">{</span>
+  <span style="color: #bebebe;">// </span><span style="color: #bebebe;">code when feature x turned off</span>
+<span style="color: #707183;">}</span>
+</pre>
+</div>
+
+</section>
+</section>
+<section>
+<section id="slide-org4aad017">
+<h2 id="org4aad017">First steps / Motivations</h2>
+<p>
+Jason: a bit about germane C++ Weekly stuff?
+</p>
+
+<p>
+Ben: a bit about C++11 constexpr experiments
+</p>
+
+</section>
+</section>
+<section>
+<section id="slide-orge45364c">
+<h2 id="orge45364c">Building Data Structures</h2>
+<div class="outline-text-2" id="text-orge45364c">
+</div></section>
+<section id="slide-orgb7c9774">
+<h3 id="orgb7c9774">Requirements for compile-time types</h3>
+
+</section>
+<section id="slide-orgadbddb0">
+<h3 id="orgadbddb0">STL shortcomings</h3>
+<ul>
+<li><code>array</code></li>
+<li><code>string</code></li>
+<li><code>string_view</code></li>
+<li><code>pair</code></li>
+<li><code>optional</code></li>
+<li><code>variant</code></li>
+
+</ul>
+
+</section>
+</section>
+<section>
+<section id="slide-org205096c">
+<h2 id="org205096c">Algorithms</h2>
+<div class="outline-text-2" id="text-org205096c">
+</div></section>
+<section id="slide-orgea0afa3">
+<h3 id="orgea0afa3">Just make them all <code>constexpr</code> already</h3>
+
+<div class="figure">
+<p><img src="./bryce_tweet.png" alt="bryce_tweet.png" />
+</p>
+</div>
+
+</section>
+</section>
+<section>
+<section id="slide-orgf92d2b0">
+<h2 id="orgf92d2b0">Literals</h2>
+<div class="outline-text-2" id="text-orgf92d2b0">
+</div></section>
+<section id="slide-org52904e7">
+<h3 id="org52904e7">Parsing</h3>
+<br>
+
+<div class="org-src-container">
+
+<pre  class="src src-haskell"><span style="color: #228b22;">Parser</span> a <span style="color: #a0522d;">::</span> <span style="color: #228b22;">String</span> <span style="color: #a0522d;">-&gt;</span> <span style="color: #707183;">[</span><span style="color: #7388d6;">(</span>a, <span style="color: #228b22;">String</span><span style="color: #7388d6;">)</span><span style="color: #707183;">]</span>
+</pre>
+</div>
+<p>
+"A parser for things is a function from strings to lists of pairs of things and strings."
+</p>
+
+<p>
+&#x2013; <a href="http://www.willamette.edu/~fruehr/haskell/seuss.html">Dr Seuss on parsers</a>
+</p>
+
+<br><br>
+
+<p>
+Or in our case something like:
+</p>
+<div class="org-src-container">
+
+<pre  class="src src-c++"><span style="color: #a020f0;">template</span> <span style="color: #707183;">&lt;</span><span style="color: #a020f0;">typename</span> <span style="color: #228b22;">T</span><span style="color: #707183;">&gt;</span>
+<span style="color: #a020f0;">using</span> <span style="color: #228b22;">parser</span> = optional<span style="color: #707183;">&lt;</span><span style="color: #228b22;">pair</span><span style="color: #7388d6;">&lt;</span><span style="color: #228b22;">T</span>, <span style="color: #228b22;">string</span><span style="color: #7388d6;">&gt;</span><span style="color: #707183;">&gt;</span> <span style="color: #707183;">(</span>*<span style="color: #707183;">)(</span>string<span style="color: #707183;">)</span>;
+</pre>
+</div>
+
+<p>
+(This slide illustrates the biggest problem in C++ today&#x2026;)
+</p>
+</section>
+</section>
+</div>
+</div>
+<script src="./reveal.js/lib/js/head.min.js"></script>
+<script src="./reveal.js/js/reveal.js"></script>
+
+<script>
+// Full list of configuration options available here:
+// https://github.com/hakimel/reveal.js#configuration
+Reveal.initialize({
+
+controls: true,
+progress: true,
+history: true,
+center: true,
+slideNumber: 'c/t',
+rollingLinks: false,
+keyboard: true,
+overview: true,
+width: 1600,
+height: 900,
+margin: 0.10,
+minScale: 0.50,
+maxScale: 2.50,
+
+theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+transition: Reveal.getQueryHash().transition || 'none', // default/cube/page/concave/zoom/linear/fade/none
+transitionSpeed: 'default',
+multiplex: {
+    secret: '', // null if client
+    id: '', // id, obtained from socket.io server
+    url: '' // Location of socket.io server
+},
+
+// Optional libraries used to extend on reveal.js
+dependencies: [
+ { src: './reveal.js/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+ { src: './reveal.js/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+ { src: './reveal.js/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+ { src: './reveal.js/plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+ { src: './reveal.js/plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }]
+});
+</script>
+</body>
+</html>
