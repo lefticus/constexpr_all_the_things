@@ -30,7 +30,7 @@
 "<h4>C++Now / Tuesday 16th May 2017</h4>"))
 #+END_SRC
 
-* Not Burying The Lede
+* Don't Bury The Lede
 
 We want to do this:
 
@@ -50,11 +50,98 @@ if constexpr (jsv["feature-x-enabled"]) {
 }
 #+END_SRC
 
-* First steps / Motivations
+#+BEGIN_NOTES
+When I first heard about ~constexpr~ I immediately thought of the potential for
+this: generating compile-time data structures with UDLs. And JSON is an obvious
+choice for a proof-of-concept.
+#+END_NOTES
 
-Jason: a bit about germane C++ Weekly stuff?
+* The Promise of ~constexpr~
+ - Runtime efficiency
+ - Clearer code, fewer magic numbers
+ - Less cross-platform pain
 
-Ben: a bit about C++11 constexpr experiments
+#+BEGIN_NOTES
+Doing work at compile-time instead of runtime. Obvious gain.
+
+Simplifying code through compile-time computation. No need for manual math,
+preprocessor computation "to be sure", magic numbers.
+
+Reducing steps in the toolchain. Don't maintain generation scripts: put it in
+the C++.
+#+END_NOTES
+
+*  ~constexpr~ History 101
+A Short, Incomplete (and Mostly Wrong?) History of ~constexpr~
+
+** ~constexpr~: The First Age
+#+ATTR_REVEAL: :frag (appear)
+ - One expression per function was allowed
+ - ~constexpr~ math functions explored
+ - ~throw~ link error trick discovered
+ - Recursive ~constexpr~ FNV1 string hash discovered
+
+#+BEGIN_NOTES
+C++11 constexpr was "extreme recursion" but many things were doable nonetheless.
+
+Scott Schurr's talks at CppNow/CppCon hinted at things to come and expounded on
+the throw trick for forcing compile-time evaluation.
+#+END_NOTES
+
+** ~constexpr~: End of the First Age
+#+BEGIN_SRC c++
+// 1. Fall of Gondolin
+// 2. Balrogs destroyed
+// 3. Morgoth defeated and cast into the Timeless Void
+// 4. constexpr string hashing discovered
+
+constexpr uint64_t fnv1(uint64_t h, const char* s)
+{
+  return (*s == 0) ? h :
+    fnv1((h * 1099511628211ull) ^ static_cast<uint64_t>(*s), s+1);
+}
+#+END_SRC
+
+#+BEGIN_NOTES
+At this point most people are probably familiar with this or something like it.
+#+END_NOTES
+
+** ~constexpr~: The Second Age
+#+ATTR_REVEAL: :frag (appear)
+ - Generalized ~constexpr~ supported by Visual C++
+ - Compile-time computation/optimization popularized by [[https://www.youtube.com/playlist?list=PLs3KjaCtOwSZ2tbuV1hx8Xz-rFZTan2J1][/C++ Weekly/]] et al.
+ - Generalized ~constexpr~ string hashing (e.g. Murmur3) discovered
+ - ~constexpr~ libraries start to appear
+
+#+BEGIN_NOTES
+For some reason, the major application of ~constexpr~ reported in the mainstream
+seems to be string hashing.
+#+END_NOTES
+
+** ~constexpr~: End of the Second Age
+[[./cpp14_murmur.png]]
+
+(Also: Last Alliance of Elves & Men, Isildur takes up the hilt of Narsil and
+cuts the One Ring from Sauron's hand.)
+
+** ~constexpr~: The Third Age?
+#+ATTR_REVEAL: :frag (appear)
+ - ~constexpr~ lambdas
+ - ~if constexpr~
+ - ~constexpr~ STL proliferation?
+ - (coming soon, no doubt) ~constexpr~ cryptographic hashes
+
+#+BEGIN_NOTES
+~constexpr~ lambdas are a really powerful thing (as we shall see).
+
+~if constexpr~ replaces many ~std::enable_if~ uses, more.
+
+A selection of interesting ~constexpr~ things in the STL: ~string_view~,
+~array~, almost all of ~chrono~.
+
+New STL features are born with ~constexpr~ (somewhat) in mind: ~optional~,
+~variant~.
+#+END_NOTES
 
 * Building Data Structures
 
@@ -70,7 +157,7 @@ Ben: a bit about C++11 constexpr experiments
 
 * Algorithms
 
-** Just make them all ~constexpr~ already
+** Let's make them all ~constexpr~ already
 [[./bryce_tweet.png]]
 
 * Literals
@@ -90,7 +177,5 @@ Parser a :: String -> [(a, String)]
 Or in our case something like:
 #+BEGIN_SRC c++
 template <typename T>
-using parser = optional<pair<T, string>> (*)(string);
+using parser = auto (*)(string) -> list<pair<T, string>>;
 #+END_SRC
-
-(This slide illustrates the biggest problem in C++ today...)

@@ -32,8 +32,8 @@
 <script type="text/javascript" src="./presentation.js"></script>
 
 <section>
-<section id="slide-org965e3d2">
-<h2 id="org965e3d2">Not Burying The Lede</h2>
+<section id="slide-orgba94338">
+<h2 id="orgba94338">Don't Bury The Lede</h2>
 <p>
 We want to do this:
 </p>
@@ -56,32 +56,179 @@ We want to do this:
 </pre>
 </div>
 
-</section>
-</section>
-<section>
-<section id="slide-org4aad017">
-<h2 id="org4aad017">First steps / Motivations</h2>
+<aside class="notes">
 <p>
-Jason: a bit about germane C++ Weekly stuff?
+When I first heard about <code>constexpr</code> I immediately thought of the potential for
+this: generating compile-time data structures with UDLs. And JSON is an obvious
+choice for a proof-of-concept.
 </p>
 
-<p>
-Ben: a bit about C++11 constexpr experiments
-</p>
+</aside>
 
 </section>
 </section>
 <section>
-<section id="slide-orge45364c">
-<h2 id="orge45364c">Building Data Structures</h2>
-<div class="outline-text-2" id="text-orge45364c">
+<section id="slide-org7ca2ed5">
+<h2 id="org7ca2ed5">The Promise of <code>constexpr</code></h2>
+<ul>
+<li>Runtime efficiency</li>
+<li>Clearer code, fewer magic numbers</li>
+<li>Less cross-platform pain</li>
+
+</ul>
+
+<aside class="notes">
+<p>
+Doing work at compile-time instead of runtime. Obvious gain.
+</p>
+
+<p>
+Simplifying code through compile-time computation. No need for manual math,
+preprocessor computation "to be sure", magic numbers.
+</p>
+
+<p>
+Reducing steps in the toolchain. Don't maintain generation scripts: put it in
+the C++.
+</p>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-orgc5db047">
+<h2 id="orgc5db047"><code>constexpr</code> History 101</h2>
+<p>
+A Short, Incomplete (and Mostly Wrong?) History of <code>constexpr</code>
+</p>
+
+</section>
+<section id="slide-orgd9acf86">
+<h3 id="orgd9acf86"><code>constexpr</code>: The First Age</h3>
+<ul>
+<li class="fragment appear">One expression per function was allowed</li>
+<li class="fragment appear"><code>constexpr</code> math functions explored</li>
+<li class="fragment appear"><code>throw</code> link error trick discovered</li>
+<li class="fragment appear">Recursive <code>constexpr</code> FNV1 string hash discovered</li>
+
+</ul>
+
+<aside class="notes">
+<p>
+C++11 constexpr was "extreme recursion" but many things were doable nonetheless.
+</p>
+
+<p>
+Scott Schurr's talks at CppNow/CppCon hinted at things to come and expounded on
+the throw trick for forcing compile-time evaluation.
+</p>
+
+</aside>
+
+</section>
+<section id="slide-orga0ea7a8">
+<h3 id="orga0ea7a8"><code>constexpr</code>: End of the First Age</h3>
+<div class="org-src-container">
+
+<pre  class="src src-c++"><span style="color: #bebebe;">// </span><span style="color: #bebebe;">1. Fall of Gondolin</span>
+<span style="color: #bebebe;">// </span><span style="color: #bebebe;">2. Balrogs destroyed</span>
+<span style="color: #bebebe;">// </span><span style="color: #bebebe;">3. Morgoth defeated and cast into the Timeless Void</span>
+<span style="color: #bebebe;">// </span><span style="color: #bebebe;">4. constexpr string hashing discovered</span>
+
+<span style="color: #a020f0;">constexpr</span> <span style="color: #228b22;">uint64_t</span> <span style="color: #0000ff;">fnv1</span><span style="color: #707183;">(</span><span style="color: #228b22;">uint64_t</span> <span style="color: #a0522d;">h</span>, <span style="color: #a020f0;">const</span> <span style="color: #228b22;">char</span>* <span style="color: #a0522d;">s</span><span style="color: #707183;">)</span>
+<span style="color: #707183;">{</span>
+  <span style="color: #a020f0;">return</span> <span style="color: #7388d6;">(</span>*s == <span style="color: #008b8b;">0</span><span style="color: #7388d6;">)</span> ? h :
+    fnv1<span style="color: #7388d6;">(</span><span style="color: #909183;">(</span><span style="color: #228b22;">h</span> * <span style="color: #008b8b;">1</span><span style="color: #008b8b; background-color: #eeeeee; font-weight: bold; text-decoration: underline;">099</span><span style="color: #008b8b;">511</span><span style="color: #008b8b; background-color: #eeeeee; font-weight: bold; text-decoration: underline;">628</span><span style="color: #008b8b;">211</span><span style="color: #008b8b;">ull</span><span style="color: #909183;">)</span> ^ <span style="color: #a020f0;">static_cast</span><span style="color: #909183;">&lt;</span><span style="color: #228b22;">uint64_t</span><span style="color: #909183;">&gt;(</span>*s<span style="color: #909183;">)</span>, s+<span style="color: #008b8b;">1</span><span style="color: #7388d6;">)</span>;
+<span style="color: #707183;">}</span>
+</pre>
+</div>
+
+<aside class="notes">
+<p>
+At this point most people are probably familiar with this or something like it.
+</p>
+
+</aside>
+
+</section>
+<section id="slide-org9bfb2fc">
+<h3 id="org9bfb2fc"><code>constexpr</code>: The Second Age</h3>
+<ul>
+<li class="fragment appear">Generalized <code>constexpr</code> supported by Visual C++</li>
+<li class="fragment appear">Compile-time computation/optimization popularized by <a href="https://www.youtube.com/playlist?list=PLs3KjaCtOwSZ2tbuV1hx8Xz-rFZTan2J1"><i>C++ Weekly</i></a> et al.</li>
+<li class="fragment appear">Generalized <code>constexpr</code> string hashing (e.g. Murmur3) discovered</li>
+<li class="fragment appear"><code>constexpr</code> libraries start to appear</li>
+
+</ul>
+
+<aside class="notes">
+<p>
+For some reason, the major application of <code>constexpr</code> reported in the mainstream
+seems to be string hashing.
+</p>
+
+</aside>
+
+</section>
+<section id="slide-orgc282586">
+<h3 id="orgc282586"><code>constexpr</code>: End of the Second Age</h3>
+
+<div class="figure">
+<p><img src="./cpp14_murmur.png" alt="cpp14_murmur.png" />
+</p>
+</div>
+
+<p>
+(Also: Last Alliance of Elves &amp; Men, Isildur takes up the hilt of Narsil and
+cuts the One Ring from Sauron's hand.)
+</p>
+
+</section>
+<section id="slide-org59417eb">
+<h3 id="org59417eb"><code>constexpr</code>: The Third Age?</h3>
+<ul>
+<li class="fragment appear"><code>constexpr</code> lambdas</li>
+<li class="fragment appear"><code>if constexpr</code></li>
+<li class="fragment appear"><code>constexpr</code> STL proliferation?</li>
+<li class="fragment appear">(coming soon, no doubt) <code>constexpr</code> cryptographic hashes</li>
+
+</ul>
+
+<aside class="notes">
+<p>
+<code>constexpr</code> lambdas are a really powerful thing (as we shall see).
+</p>
+
+<p>
+<code>if constexpr</code> replaces many <code>std::enable_if</code> uses, more.
+</p>
+
+<p>
+A selection of interesting <code>constexpr</code> things in the STL: <code>string_view</code>,
+<code>array</code>, almost all of <code>chrono</code>.
+</p>
+
+<p>
+New STL features are born with <code>constexpr</code> (somewhat) in mind: <code>optional</code>,
+<code>variant</code>.
+</p>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-org3f00963">
+<h2 id="org3f00963">Building Data Structures</h2>
+<div class="outline-text-2" id="text-org3f00963">
 </div></section>
-<section id="slide-orgb7c9774">
-<h3 id="orgb7c9774">Requirements for compile-time types</h3>
+<section id="slide-org5cbdd76">
+<h3 id="org5cbdd76">Requirements for compile-time types</h3>
 
 </section>
-<section id="slide-orgadbddb0">
-<h3 id="orgadbddb0">STL shortcomings</h3>
+<section id="slide-orgacd2b0f">
+<h3 id="orgacd2b0f">STL shortcomings</h3>
 <ul>
 <li><code>array</code></li>
 <li><code>string</code></li>
@@ -95,12 +242,12 @@ Ben: a bit about C++11 constexpr experiments
 </section>
 </section>
 <section>
-<section id="slide-org205096c">
-<h2 id="org205096c">Algorithms</h2>
-<div class="outline-text-2" id="text-org205096c">
+<section id="slide-org2760536">
+<h2 id="org2760536">Algorithms</h2>
+<div class="outline-text-2" id="text-org2760536">
 </div></section>
-<section id="slide-orgea0afa3">
-<h3 id="orgea0afa3">Just make them all <code>constexpr</code> already</h3>
+<section id="slide-org7039d33">
+<h3 id="org7039d33">Let's make them all <code>constexpr</code> already</h3>
 
 <div class="figure">
 <p><img src="./bryce_tweet.png" alt="bryce_tweet.png" />
@@ -110,12 +257,12 @@ Ben: a bit about C++11 constexpr experiments
 </section>
 </section>
 <section>
-<section id="slide-orgf92d2b0">
-<h2 id="orgf92d2b0">Literals</h2>
-<div class="outline-text-2" id="text-orgf92d2b0">
+<section id="slide-orgc541758">
+<h2 id="orgc541758">Literals</h2>
+<div class="outline-text-2" id="text-orgc541758">
 </div></section>
-<section id="slide-org52904e7">
-<h3 id="org52904e7">Parsing</h3>
+<section id="slide-orga77a98e">
+<h3 id="orga77a98e">Parsing</h3>
 <br>
 
 <div class="org-src-container">
@@ -139,13 +286,9 @@ Or in our case something like:
 <div class="org-src-container">
 
 <pre  class="src src-c++"><span style="color: #a020f0;">template</span> <span style="color: #707183;">&lt;</span><span style="color: #a020f0;">typename</span> <span style="color: #228b22;">T</span><span style="color: #707183;">&gt;</span>
-<span style="color: #a020f0;">using</span> <span style="color: #228b22;">parser</span> = optional<span style="color: #707183;">&lt;</span><span style="color: #228b22;">pair</span><span style="color: #7388d6;">&lt;</span><span style="color: #228b22;">T</span>, <span style="color: #228b22;">string</span><span style="color: #7388d6;">&gt;</span><span style="color: #707183;">&gt;</span> <span style="color: #707183;">(</span>*<span style="color: #707183;">)(</span>string<span style="color: #707183;">)</span>;
+<span style="color: #a020f0;">using</span> <span style="color: #228b22;">parser</span> = <span style="color: #a020f0;">auto</span> <span style="color: #707183;">(</span>*<span style="color: #707183;">)(</span>string<span style="color: #707183;">)</span> -&gt; <span style="color: #228b22;">list</span><span style="color: #707183;">&lt;</span><span style="color: #228b22;">pair</span><span style="color: #7388d6;">&lt;</span><span style="color: #228b22;">T</span>, <span style="color: #228b22;">string</span><span style="color: #7388d6;">&gt;</span><span style="color: #707183;">&gt;</span>;
 </pre>
 </div>
-
-<p>
-(This slide illustrates the biggest problem in C++ today&#x2026;)
-</p>
 </section>
 </section>
 </div>
