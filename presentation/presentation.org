@@ -40,7 +40,7 @@ constexpr auto jsv
         "feature-x-enabled": true,
         "value-of-y": 1729,
         "z-options": {"a": null,
-                      "b": "joshua",
+                      "b": "220 and 284",
                       "c": [6, 28, 496]}
        })"_json;
 if constexpr (jsv["feature-x-enabled"]) {
@@ -76,7 +76,7 @@ A Short, Incomplete (and Mostly Wrong?) History of ~constexpr~
 
 ** ~constexpr~: The First Age
 #+ATTR_REVEAL: :frag (appear)
- - One expression per function was allowed
+ - One (~return~) expression per function was allowed
  - ~constexpr~ math functions explored
  - ~throw~ link error trick discovered
  - Recursive ~constexpr~ FNV1 string hash discovered
@@ -121,8 +121,8 @@ seems to be string hashing.
 ** ~constexpr~: End of the Second Age
 [[./cpp14_murmur.png]]
 
-(Also: Last Alliance of Elves & Men, Isildur takes up the hilt of Narsil and
-cuts the One Ring from Sauron's hand.)
+(Also: Last Alliance of Elves & Men, Isildur takes up the hilt of Narsil\\
+and cuts the One Ring from Sauron's hand.)
 
 ** ~constexpr~: The Third Age?
 #+ATTR_REVEAL: :frag (appear)
@@ -143,7 +143,245 @@ New STL features are born with ~constexpr~ (somewhat) in mind: ~optional~,
 ~variant~.
 #+END_NOTES
 
-* Building Data Structures
+* Building ~constexpr~ JSON Values
+
+Two problems to solve:
+
+1. How to represent JSON values
+1. How to parse JSON values
+
+* Representing JSON Values
+
+A JSON Value is a discriminated union of:\\
+\\
+#+ATTR_REVEAL: :frag (appear)
+ - null
+ - boolean
+ - number
+ - string
+ - array of values
+ - object (map of string -> value)
+
+#+ATTR_REVEAL: :frag (appear)
+\\
+Clearly this is going to need some sort of recursion. And we are going to need
+~constexpr~ ways to deal with a string, a vector and a map.
+
+** ~constexpr~ strings
+\\
+First, ~std::string_view~ is great, and /mostly/ ~constexpr~\\
+(depending on how up-to-date your library implementation is).\\
+\\
+\\
+Of course, ~std::string_view~ only really handles literal values:\\
+it doesn't deal with building strings.\\
+\\
+\\
+So ~constexpr~ strings (that can be built up) are really arrays of chars.
+
+#+BEGIN_NOTES
+~string_view~ comparison is not yet ~constexpr~.
+#+END_NOTES
+
+** ~constexpr~ strings
+#+BEGIN_SRC c++
+struct static_string
+{
+  template <std::size_t N>
+  constexpr static_string(const char (&str)[N])
+    : m_size(N-1), m_data(&str[0])
+  {}
+
+  constexpr static_string(const char* str, std::size_t s)
+    : m_size(s), m_data(str)
+  {}
+
+  constexpr static_string() = default;
+
+  constexpr size_t size() const { return m_size; }
+  constexpr const char *c_str() const { return m_data; }
+
+  std::size_t m_size{0};
+  const char *m_data = nullptr;
+};
+#+END_SRC
+
+** ~constexpr~ vectors
+
+#+BEGIN_SRC c++
+template <typename Value, std::size_t Size = 5>
+class vector
+{
+  using storage_t = std::array<Value, Size>;
+  storage_t m_data{};
+  std::size_t m_size{0};
+  ...
+
+  // iterators, push_back, operator[] etc
+  // are pretty easy to write
+}
+#+END_SRC
+
+#+BEGIN_NOTES
+Obviously we need to know the size at compile time.
+#+END_NOTES
+
+** ~constexpr~ vectors
+
+#+BEGIN_SRC c++
+using iterator = typename storage_t::iterator;
+using const_iterator = typename storage_t::const_iterator;
+
+constexpr auto begin() const { return m_data.begin(); }
+constexpr auto end() const { return m_data.begin() + m_size; }
+// and similarly for other iterator functions...
+
+constexpr void push_back(Value t_v)
+{
+  if (m_size >= Size) {
+    throw std::range_error("Index past end of vector");
+  } else {
+    m_data[m_size++] = std::move(t_v);
+  }
+}
+#+END_SRC
+
+We were not able to use ~std::next()~ here...
+
+#+BEGIN_NOTES
+Note that the ~throw~ here is a nicety: if we were to read/write past the end of
+a ~constexpr~ array the compiler would give an error anyway.
+#+END_NOTES
+
+** Some trivial issues that arise
+In GCC's implementation: internal ~__iterator_category~ is not ~constexpr~ constructible.
+
+#+REVEAL_HTML: <iframe width="1400px" height="800px" src="https://gcc.godbolt.org/e#g:!((g:!((g:!((h:codeEditor,i:(fontScale:1.2899450879999999,j:1,source:'%23include+%3Carray%3E%0A%23include+%3Citerator%3E%0A%0Ausing+namespace+std%3B%0A%0Aconstexpr+array%3Cint,+5%3E+foo+%3D+%7B1,2,3,4,5%7D%3B%0A%0Aconstexpr+auto+third_of_foo()%0A%7B%0A++return+next(foo.cbegin(),+3)%3B%0A%7D%0A%0Aint+main()%0A%7B%0A++constexpr+auto+i+%3D+*third_of_foo()%3B%0A%7D%0A'),l:'5',n:'0',o:'C%2B%2B+source+%231',t:'0')),k:44.41586064715348,l:'4',n:'0',o:'',s:0,t:'0'),(g:!((g:!((h:compiler,i:(compiler:g7snapshot,filters:(b:'0',commentOnly:'0',directives:'0',intel:'0'),fontScale:1.5479341055999998,options:'-std%3Dc%2B%2B1z+-O3+-Wall+-Wextra',source:1),l:'5',n:'0',o:'x86-64+gcc+7+(snapshot)+(Editor+%231,+Compiler+%231)',t:'0')),k:43.26069218283827,l:'4',m:21.627408993576015,n:'0',o:'',s:0,t:'0'),(g:!((h:output,i:(compiler:1,editor:1),l:'5',n:'0',o:'%231+with+x86-64+gcc+7+(snapshot)',t:'0')),l:'4',m:78.37259100642399,n:'0',o:'',s:0,t:'0')),k:55.58413935284653,l:'3',n:'0',o:'',t:'0')),l:'2',n:'0',o:'',t:'0')),version:4"></iframe>
+
+** ~constexpr~ maps
+
+#+BEGIN_SRC c++
+template <typename Key, typename Value, std::size_t Size = 5>
+class map
+{
+  using storage_t = std::array<cx::pair<Key, Value>, Size>;
+  storage_t m_data{};
+  std::size_t m_size{0};
+  ...
+
+  // iterators are the same as for arrays
+  // operator[] needs a constexpr find
+}
+#+END_SRC
+
+** Why not ~std::pair~?
+In GCC's implementation: problem with assignment.
+
+#+REVEAL_HTML: <iframe width="1400px" height="800px" src="https://gcc.godbolt.org/e#g:!((g:!((g:!((h:codeEditor,i:(fontScale:1.2899450879999999,j:1,source:'%23include+%3Cutility%3E%0A%0Ausing+namespace+std%3B%0A%0Astruct+P+%0A%7B%0A++std::pair%3Cconst+char*,+int%3E+pr%3B%0A%7D%3B%0A%0Aconstexpr+auto+pair_test()%0A%7B%0A++P+p%3B%0A++p.pr+%3D+make_pair(%22taxicab%22,+1729)%3B%0A++return+p%3B%0A%7D%0A%0Aint+main()%0A%7B%0A++constexpr+auto+p+%3D+pair_test()%3B%0A%7D%0A'),l:'5',n:'0',o:'C%2B%2B+source+%231',t:'0')),k:44.41586064715348,l:'4',n:'0',o:'',s:0,t:'0'),(g:!((g:!((h:compiler,i:(compiler:g7snapshot,filters:(b:'0',commentOnly:'0',directives:'0',intel:'0'),fontScale:1.2899450879999999,options:'-std%3Dc%2B%2B1z+-O3+-Wall+-Wextra',source:1),l:'5',n:'0',o:'x86-64+gcc+7+(snapshot)+(Editor+%231,+Compiler+%231)',t:'0')),k:43.26069218283827,l:'4',m:19.48608137044968,n:'0',o:'',s:0,t:'0'),(g:!((h:output,i:(compiler:1,editor:1),l:'5',n:'0',o:'%231+with+x86-64+gcc+7+(snapshot)',t:'0')),l:'4',m:80.51391862955032,n:'0',o:'',s:0,t:'0')),k:55.58413935284653,l:'3',n:'0',o:'',t:'0')),l:'2',n:'0',o:'',t:'0')),version:4"></iframe>
+
+** ~constexpr find_if~
+
+#+BEGIN_SRC c++
+template <class InputIt, class UnaryPredicate>
+constexpr InputIt find_if(InputIt first, InputIt last, UnaryPredicate p)
+{
+  for (; first != last; ++first) {
+    if (p(*first)) {
+      return first;
+    }
+  }
+  return last;
+}
+#+END_SRC
+
+#+BEGIN_NOTES
+There's no technical reason for many algorithms not to be ~constexpr~.
+#+END_NOTES
+
+** Let's make them all ~constexpr~ already
+[[./bryce_tweet.png]]
+
+** Other algorithms we made ~constexpr~
+
+ - mismatch
+ - equal
+ - copy
+
+** JSON Value: First attempt
+#+BEGIN_SRC c++
+template <size_t Depth=5>
+struct JSON_Value
+{
+  static constexpr size_t max_vector_size{6};
+  static constexpr size_t max_map_size{6};
+
+  struct Data
+  {
+    bool boolean{false};
+    double number{0};
+    cx::static_string string;
+    cx::vector<JSON_Value<Depth-1>, max_vector_size> array;
+    cx::map<cx::static_string, JSON_Value<Depth-1>, max_map_size> object;
+  };
+  enum struct Type { Null, Boolean, Number, String, Array, Object };
+
+  Type type = Type::Null;
+  Data data;
+  ...
+};
+
+template <> struct JSON_Value<0> {};
+#+END_SRC
+
+#+BEGIN_NOTES
+This makes for a lot of template instantiations, and has some obvious limitations.
+
+The max sizes for arrays and objects are determined empirically.
+#+END_NOTES
+
+** JSON Value: First attempt
+#+BEGIN_SRC c++
+struct JSON_Value
+{
+  constexpr void assert_type(Type t) const
+  {
+    if (type != t) throw std::runtime_error("Incorrect type");
+  }
+
+  // For Array, and similarly for the other types
+  constexpr decltype(auto) to_Array() const
+  {
+    assert_type(Type::Array);
+    return (data.array);
+  }
+  constexpr decltype(auto) to_Array()
+  {
+    if (type != Type::Array) {
+      type = Type::Array;
+      data.array = {};
+    }
+    return (data.array);
+  }
+};
+#+END_SRC
+
+** JSON Value: First attempt
+#+BEGIN_SRC c++
+cx::JSON_Value j{};
+j["a"].to_Number() = 15;
+j["b"].to_String() = "Hello World";
+j["d"].to_Array();
+j["c"]["a"]["b"].to_Array().push_back(10.0);
+j["c"]["a"]["c"] = cx::static_string("Hello World");
+j["c"]["a"]["d"].to_Array().push_back(5.2);
+#+END_SRC
+
+#+BEGIN_NOTES
+But this kind of thing works. Note that we are using C++17 class template type
+deduction here so we don't need to say ~cx::JSON_Value<> j{};~
+#+END_NOTES
+
+** Why not ~std::variant~ ?
 
 ** Requirements for compile-time types
 
@@ -155,12 +393,7 @@ New STL features are born with ~constexpr~ (somewhat) in mind: ~optional~,
  - ~optional~
  - ~variant~
 
-* Algorithms
-
-** Let's make them all ~constexpr~ already
-[[./bryce_tweet.png]]
-
-* Literals
+* Parsing JSON Values Literals
 
 ** Parsing
 #+REVEAL_HTML: <br>
