@@ -174,14 +174,24 @@ First, ~std::string_view~ is great, and /mostly/ ~constexpr~\\
 \\
 \\
 Of course, ~std::string_view~ only really handles literal values:\\
-it doesn't deal with building strings.\\
-\\
-\\
-So ~constexpr~ strings (that can be built up) are really arrays of chars.
+it doesn't deal with building strings, and is not intended for /storing/ strings\\
 
 #+BEGIN_NOTES
 ~string_view~ comparison is not yet ~constexpr~.
 #+END_NOTES
+
+** ~constexpr~ strings
+\\
+We need a way to pass, store and in general work with\\
+character string literals.\\
+\\
+\\
+While ~std::string_view~ would technically work for this\\
+it kind of mixes-metaphors, since it is not intended for storing\\
+and comparison - just viewing.\\
+\\
+\\
+For this, we built up the ~static_string~ class
 
 ** ~constexpr~ strings
 #+BEGIN_SRC c++
@@ -192,6 +202,7 @@ struct static_string
     : m_size(N-1), m_data(&str[0])
   {}
 
+  // constructor for substrings of string literals
   constexpr static_string(const char* str, std::size_t s)
     : m_size(s), m_data(str)
   {}
@@ -223,7 +234,7 @@ class vector
 #+END_SRC
 
 #+BEGIN_NOTES
-Obviously we need to know the size at compile time.
+Obviously we need to know the max size at compile time.
 #+END_NOTES
 
 ** ~constexpr~ vectors
@@ -246,17 +257,75 @@ constexpr void push_back(Value t_v)
 }
 #+END_SRC
 
-We were not able to use ~std::next()~ here...
+We were not able to use ~std::next()~ here, seems to be a bug in the implementation...
 
 #+BEGIN_NOTES
 Note that the ~throw~ here is a nicety: if we were to read/write past the end of
-a ~constexpr~ array the compiler would give an error anyway.
+a ~constexpr~ array the compiler would give an error anyway. Assuming we are working
+in a ~constexpr~ context. This throw protects us if this class is used just for a handy
+statically sized vector.
 #+END_NOTES
 
+** ~constexpr~ vectors
+
+This allows for natural use of the ~vector~ type
+
+#+BEGIN_SRC c++
+vector<int> vec;
+vec.push_back(15);
+#+END_SRC
+
+** ~constexpr~ vectors
+
+Or put into a ~constexpr~ context
+
+#+BEGIN_SRC c++
+constexpr auto get_vector() {
+  vector<int> vec;
+  vec.push_back(15);
+  return vec;
+}
+
+int main() {
+  constexpr auto a_vector = get_vector();
+  static_assert(a_vector.size() == 1);
+}
+#+END_SRC
+
+
 ** Some trivial issues that arise
+
 In GCC's implementation: internal ~__iterator_category~ is not ~constexpr~ constructible.
 
 #+REVEAL_HTML: <iframe width="1400px" height="800px" src="https://gcc.godbolt.org/e#g:!((g:!((g:!((h:codeEditor,i:(fontScale:1.2899450879999999,j:1,source:'%23include+%3Carray%3E%0A%23include+%3Citerator%3E%0A%0Ausing+namespace+std%3B%0A%0Aconstexpr+array%3Cint,+5%3E+foo+%3D+%7B1,2,3,4,5%7D%3B%0A%0Aconstexpr+auto+third_of_foo()%0A%7B%0A++return+next(foo.cbegin(),+3)%3B%0A%7D%0A%0Aint+main()%0A%7B%0A++constexpr+auto+i+%3D+*third_of_foo()%3B%0A%7D%0A'),l:'5',n:'0',o:'C%2B%2B+source+%231',t:'0')),k:44.41586064715348,l:'4',n:'0',o:'',s:0,t:'0'),(g:!((g:!((h:compiler,i:(compiler:g7snapshot,filters:(b:'0',commentOnly:'0',directives:'0',intel:'0'),fontScale:1.5479341055999998,options:'-std%3Dc%2B%2B1z+-O3+-Wall+-Wextra',source:1),l:'5',n:'0',o:'x86-64+gcc+7+(snapshot)+(Editor+%231,+Compiler+%231)',t:'0')),k:43.26069218283827,l:'4',m:21.627408993576015,n:'0',o:'',s:0,t:'0'),(g:!((h:output,i:(compiler:1,editor:1),l:'5',n:'0',o:'%231+with+x86-64+gcc+7+(snapshot)',t:'0')),l:'4',m:78.37259100642399,n:'0',o:'',s:0,t:'0')),k:55.58413935284653,l:'3',n:'0',o:'',t:'0')),l:'2',n:'0',o:'',t:'0')),version:4"></iframe>
+
+** mutable ~constexpr~ strings
+
+And now we can build a mutable ~constexpr~ string by inheriting from our ~vector~
+
+** mutable ~constexpr~ strings
+
+#+BEGIN_SRC c++
+template<typename CharType, size_t Size>
+struct basic_string : vector<CharType, Size>
+{
+  constexpr basic_string(const static_string &s) 
+    : vector<CharType, Size>(s.begin(), s.end())
+  {
+  }
+  constexpr basic_string(const std::string_view &s)
+    : vector<CharType, Size>(s.cbegin(), s.cend())
+  {
+  }
+  // ...
+};
+#+END_SRC
+
+This relies on:\\
+ - ~constexpr~ data members must be initialized, so our base vector is all ~0~
+ - We have not provided any methods for shrinking our data structures, but that is possible
+
+
 
 ** ~constexpr~ maps
 
@@ -271,15 +340,38 @@ class map
 
   // iterators are the same as for arrays
   // operator[] needs a constexpr find
+  // data grows in the same way that vector does
+}
+#+END_SRC
+
+** ~constexpr~ maps
+
+#+BEGIN_SRC c++
+auto get_colors() {
+  cx::map<cx::static_string, std::uint32_t> colors;
+  colors["red"] = 0xFF0000;
+  colors["green"] = 0x00FF00;
+  return colors;
+}
+
+int main() {
+  constexpr colors = get_colors();
+  colors["red"]; // returns 0xFF0000
+  colors["blue"]; // compile-time error
 }
 #+END_SRC
 
 ** Why not ~std::pair~?
-In GCC's implementation: problem with assignment.
+
+Standard library definition does not have ~constexpr operator=~ \\
+for ~std::pair~\\
+\\
+This is the only aspect of ~std::pair~ that is not ~constexpr~
 
 #+REVEAL_HTML: <iframe width="1400px" height="800px" src="https://gcc.godbolt.org/e#g:!((g:!((g:!((h:codeEditor,i:(fontScale:1.2899450879999999,j:1,source:'%23include+%3Cutility%3E%0A%0Ausing+namespace+std%3B%0A%0Astruct+P+%0A%7B%0A++std::pair%3Cconst+char*,+int%3E+pr%3B%0A%7D%3B%0A%0Aconstexpr+auto+pair_test()%0A%7B%0A++P+p%3B%0A++p.pr+%3D+make_pair(%22taxicab%22,+1729)%3B%0A++return+p%3B%0A%7D%0A%0Aint+main()%0A%7B%0A++constexpr+auto+p+%3D+pair_test()%3B%0A%7D%0A'),l:'5',n:'0',o:'C%2B%2B+source+%231',t:'0')),k:44.41586064715348,l:'4',n:'0',o:'',s:0,t:'0'),(g:!((g:!((h:compiler,i:(compiler:g7snapshot,filters:(b:'0',commentOnly:'0',directives:'0',intel:'0'),fontScale:1.2899450879999999,options:'-std%3Dc%2B%2B1z+-O3+-Wall+-Wextra',source:1),l:'5',n:'0',o:'x86-64+gcc+7+(snapshot)+(Editor+%231,+Compiler+%231)',t:'0')),k:43.26069218283827,l:'4',m:19.48608137044968,n:'0',o:'',s:0,t:'0'),(g:!((h:output,i:(compiler:1,editor:1),l:'5',n:'0',o:'%231+with+x86-64+gcc+7+(snapshot)',t:'0')),l:'4',m:80.51391862955032,n:'0',o:'',s:0,t:'0')),k:55.58413935284653,l:'3',n:'0',o:'',t:'0')),l:'2',n:'0',o:'',t:'0')),version:4"></iframe>
 
 ** ~constexpr find_if~
+
 
 #+BEGIN_SRC c++
 template <class InputIt, class UnaryPredicate>
@@ -299,6 +391,7 @@ There's no technical reason for many algorithms not to be ~constexpr~.
 #+END_NOTES
 
 ** Let's make them all ~constexpr~ already
+
 [[./bryce_tweet.png]]
 
 ** Other algorithms we made ~constexpr~
@@ -308,6 +401,7 @@ There's no technical reason for many algorithms not to be ~constexpr~.
  - copy
 
 ** JSON Value: First attempt
+
 #+BEGIN_SRC c++
 template <size_t Depth=5>
 struct JSON_Value
@@ -340,6 +434,7 @@ The max sizes for arrays and objects are determined empirically.
 #+END_NOTES
 
 ** JSON Value: First attempt
+
 #+BEGIN_SRC c++
 struct JSON_Value
 {
@@ -366,6 +461,7 @@ struct JSON_Value
 #+END_SRC
 
 ** JSON Value: First attempt
+
 #+BEGIN_SRC c++
 cx::JSON_Value j{};
 j["a"].to_Number() = 15;
@@ -383,15 +479,45 @@ deduction here so we don't need to say ~cx::JSON_Value<> j{};~
 
 ** Why not ~std::variant~ ?
 
+Similarly to ~std::pair~, ~std::variant~ is missing some key ~constexpr~ support.
+
+#+ATTR_REVEAL: :frag (appear)
+ - ~std::variant(const std::variant &)~
+ - ~std::variant(std::variant &&)~
+ - ~std::variant &operator=(const std::variant &)~
+ - ~std::variant &operator=(std::variant &&)~
+
 ** Requirements for compile-time types
 
+Huge list! Are you ready?! 
+
+#+ATTR_REVEAL: :frag (appear)
+ - ~constexpr~ constructor
+ - ~std::is_trivially_destructible~ 
+
+#+ATTR_REVEAL: :frag (appear)
+Nothing else is required if it does not get invoked.
+
 ** STL shortcomings
+
  - ~array~
  - ~string~
  - ~string_view~
  - ~pair~
  - ~optional~
  - ~variant~
+ - ~swap~
+
+** Limitations of our containers
+ 
+ - Fixed maximum size
+ - (Currently) cannot shrink
+ * Requires types that are default constructible 
+
+** How to improve our containers
+ 
+ - We could wrap objects in ~std::optional~ to allow for objects that are not defuault constructible
+ - It should be possible to templatize on ~constexpr~ enabled allocator, making these containers optionally ~constexpr~
 
 * Parsing JSON Values Literals
 
