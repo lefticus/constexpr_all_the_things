@@ -172,10 +172,10 @@ template <bool>
 using true_t = std::true_type;
 
 template <typename T>
-auto has_constexpr_default_constructor(int) -> true_t<(T{}, true)>;
+constexpr auto has_constexpr_default_constructor(int) -> true_t<(T{}, true)>;
 
 template <typename>
-auto has_constexpr_default_constructor(...) -> std::false_type;
+constexpr auto has_constexpr_default_constructor(...) -> std::false_type;
 
 template <typename T>
 struct is_constexpr_default_constructible
@@ -201,12 +201,18 @@ Caveats: many.
 #+ATTR_REVEAL: :frag (appear)
  - "~constexpr~ constructible" doesn't mean "~constexpr~ hashable"
  - "~constexpr~ capable" doesn't mean "in a ~constexpr~ context"
- - verbosity
+ - verbosity, compile time?
 
 #+BEGIN_NOTES
 If you're going to go with this kind of thing, you might as well define
 completely different types for use at compile time and runtime.
 #+END_NOTES
+
+** ~constexpr~ SFINAE?
+
+Another possible (better) solution.
+
+[[./constexpr_operator.png]]
 
 * Building ~constexpr~ JSON Values
 
