@@ -143,6 +143,71 @@ New STL features are born with ~constexpr~ (somewhat) in mind: ~optional~,
 ~variant~.
 #+END_NOTES
 
+* A problem with ~constexpr~
+
+[[./constexpr_problem.png]]
+
+The inability to use different runtime and compile time algorithms.
+
+** ~constexpr~ SFINAE?
+
+A partial solution, perhaps.
+
+#+BEGIN_SRC c++
+constexpr auto str_view = "Computers are useless."sv;
+constexpr auto cx_hash = fnv1(str_view);
+
+auto str = "They can only give you answers."s;
+auto rt_hash = fnv1(str);
+#+END_SRC
+
+We would /like/ the second call to ~fnv1~ to use an efficient runtime algorithm.
+
+** ~constexpr~ SFINAE?
+
+You /can/ do something like this...
+
+#+BEGIN_SRC c++
+template <bool>
+using true_t = std::true_type;
+
+template <typename T>
+auto has_constexpr_default_constructor(int) -> true_t<(T{}, true)>;
+
+template <typename>
+auto has_constexpr_default_constructor(...) -> std::false_type;
+
+template <typename T>
+struct is_constexpr_default_constructible
+  : decltype(has_constexpr_default_constructor<T>(0)){};
+#+END_SRC
+
+
+** ~constexpr~ SFINAE?
+
+#+BEGIN_SRC c++
+template <typename StringType>
+constexpr auto fnv1(const StringType& s)
+{
+  if constexpr(is_constexpr_default_constructible<StringType>::value) {
+    return cx::fnv1(s);
+  } else {
+    return runtime::fnv1(s);
+  }
+}
+#+END_SRC
+
+Caveats: many.
+#+ATTR_REVEAL: :frag (appear)
+ - "~constexpr~ constructible" doesn't mean "~constexpr~ hashable"
+ - "~constexpr~ capable" doesn't mean "in a ~constexpr~ context"
+ - verbosity
+
+#+BEGIN_NOTES
+If you're going to go with this kind of thing, you might as well define
+completely different types for use at compile time and runtime.
+#+END_NOTES
+
 * Building ~constexpr~ JSON Values
 
 Two problems to solve:
@@ -174,7 +239,7 @@ First, ~std::string_view~ is great, and /mostly/ ~constexpr~\\
 \\
 \\
 Of course, ~std::string_view~ only really handles literal values:\\
-it doesn't deal with building strings, and is not intended for /storing/ strings\\
+it doesn't deal with building strings, and is not intended for /storing/ strings.
 
 #+BEGIN_NOTES
 ~string_view~ comparison is not yet ~constexpr~.
@@ -182,16 +247,16 @@ it doesn't deal with building strings, and is not intended for /storing/ strings
 
 ** ~constexpr~ strings
 \\
-We need a way to pass, store and in general work with\\
+We need a way to pass, store, and in general, work with\\
 character string literals.\\
 \\
 \\
 While ~std::string_view~ would technically work for this\\
-it kind of mixes-metaphors, since it is not intended for storing\\
+it kind of mixes metaphors, since it is not intended for storing\\
 and comparison - just viewing.\\
 \\
 \\
-For this, we built up the ~static_string~ class
+For this, we built up the ~static_string~ class.
 
 ** ~constexpr~ strings
 #+BEGIN_SRC c++
@@ -266,6 +331,13 @@ in a ~constexpr~ context. This throw protects us if this class is used just for 
 statically sized vector.
 #+END_NOTES
 
+
+** Why not ~std::next~?
+
+In GCC's implementation: internal ~__iterator_category~ is not ~constexpr~ constructible.
+
+#+REVEAL_HTML: <iframe width="1400px" height="600px" src="https://gcc.godbolt.org/e#g:!((g:!((g:!((h:codeEditor,i:(fontScale:1.2899450879999999,j:1,source:'%23include+%3Carray%3E%0A%23include+%3Citerator%3E%0A%0Ausing+namespace+std%3B%0A%0Aconstexpr+array%3Cint,+5%3E+foo+%3D+%7B1,2,3,4,5%7D%3B%0A%0Aconstexpr+auto+third_of_foo()%0A%7B%0A++return+next(foo.cbegin(),+3)%3B%0A%7D%0A%0Aint+main()%0A%7B%0A++constexpr+auto+i+%3D+*third_of_foo()%3B%0A%7D%0A'),l:'5',n:'0',o:'C%2B%2B+source+%231',t:'0')),k:44.41586064715348,l:'4',n:'0',o:'',s:0,t:'0'),(g:!((g:!((h:compiler,i:(compiler:g7snapshot,filters:(b:'0',commentOnly:'0',directives:'0',intel:'0'),fontScale:1.5479341055999998,options:'-std%3Dc%2B%2B1z+-O3+-Wall+-Wextra',source:1),l:'5',n:'0',o:'x86-64+gcc+7+(snapshot)+(Editor+%231,+Compiler+%231)',t:'0')),k:43.26069218283827,l:'4',m:21.627408993576015,n:'0',o:'',s:0,t:'0'),(g:!((h:output,i:(compiler:1,editor:1),l:'5',n:'0',o:'%231+with+x86-64+gcc+7+(snapshot)',t:'0')),l:'4',m:78.37259100642399,n:'0',o:'',s:0,t:'0')),k:55.58413935284653,l:'3',n:'0',o:'',t:'0')),l:'2',n:'0',o:'',t:'0')),version:4"></iframe>
+
 ** ~constexpr~ vectors
 
 This allows for natural use of the ~vector~ type
@@ -292,13 +364,6 @@ int main() {
 }
 #+END_SRC
 
-
-** Some trivial issues that arise
-
-In GCC's implementation: internal ~__iterator_category~ is not ~constexpr~ constructible.
-
-#+REVEAL_HTML: <iframe width="1400px" height="800px" src="https://gcc.godbolt.org/e#g:!((g:!((g:!((h:codeEditor,i:(fontScale:1.2899450879999999,j:1,source:'%23include+%3Carray%3E%0A%23include+%3Citerator%3E%0A%0Ausing+namespace+std%3B%0A%0Aconstexpr+array%3Cint,+5%3E+foo+%3D+%7B1,2,3,4,5%7D%3B%0A%0Aconstexpr+auto+third_of_foo()%0A%7B%0A++return+next(foo.cbegin(),+3)%3B%0A%7D%0A%0Aint+main()%0A%7B%0A++constexpr+auto+i+%3D+*third_of_foo()%3B%0A%7D%0A'),l:'5',n:'0',o:'C%2B%2B+source+%231',t:'0')),k:44.41586064715348,l:'4',n:'0',o:'',s:0,t:'0'),(g:!((g:!((h:compiler,i:(compiler:g7snapshot,filters:(b:'0',commentOnly:'0',directives:'0',intel:'0'),fontScale:1.5479341055999998,options:'-std%3Dc%2B%2B1z+-O3+-Wall+-Wextra',source:1),l:'5',n:'0',o:'x86-64+gcc+7+(snapshot)+(Editor+%231,+Compiler+%231)',t:'0')),k:43.26069218283827,l:'4',m:21.627408993576015,n:'0',o:'',s:0,t:'0'),(g:!((h:output,i:(compiler:1,editor:1),l:'5',n:'0',o:'%231+with+x86-64+gcc+7+(snapshot)',t:'0')),l:'4',m:78.37259100642399,n:'0',o:'',s:0,t:'0')),k:55.58413935284653,l:'3',n:'0',o:'',t:'0')),l:'2',n:'0',o:'',t:'0')),version:4"></iframe>
-
 ** mutable ~constexpr~ strings
 
 And now we can build a mutable ~constexpr~ string by inheriting from our ~vector~
@@ -306,26 +371,22 @@ And now we can build a mutable ~constexpr~ string by inheriting from our ~vector
 ** mutable ~constexpr~ strings
 
 #+BEGIN_SRC c++
-template<typename CharType, size_t Size>
+template <typename CharType, size_t Size>
 struct basic_string : vector<CharType, Size>
 {
   constexpr basic_string(const static_string &s) 
     : vector<CharType, Size>(s.begin(), s.end())
-  {
-  }
+  {}
   constexpr basic_string(const std::string_view &s)
     : vector<CharType, Size>(s.cbegin(), s.cend())
-  {
-  }
+  {}
   // ...
 };
 #+END_SRC
 
-This relies on:\\
+This relies on:
  - ~constexpr~ data members must be initialized, so our base vector is all ~0~
  - We have not provided any methods for shrinking our data structures, but that is possible
-
-
 
 ** ~constexpr~ maps
 
@@ -347,18 +408,18 @@ class map
 ** ~constexpr~ maps
 
 #+BEGIN_SRC c++
-auto get_colors() {
-  cx::map<cx::static_string, std::uint32_t> colors;
-  colors["red"] = 0xFF0000;
-  colors["green"] = 0x00FF00;
-  return colors;
-}
+  auto get_colors() {
+    cx::map<cx::static_string, std::uint32_t> colors;
+    colors["red"] = 0xFF0000;
+    colors["green"] = 0x00FF00;
+    return colors;
+  }
 
-int main() {
-  constexpr colors = get_colors();
-  colors["red"]; // returns 0xFF0000
-  colors["blue"]; // compile-time error
-}
+  int main() {
+    constexpr colors = get_colors();
+    colors["red"]; // returns 0xFF0000
+    colors["blue"]; // compile-time error
+  }
 #+END_SRC
 
 ** Why not ~std::pair~?
@@ -368,10 +429,9 @@ for ~std::pair~\\
 \\
 This is the only aspect of ~std::pair~ that is not ~constexpr~
 
-#+REVEAL_HTML: <iframe width="1400px" height="800px" src="https://gcc.godbolt.org/e#g:!((g:!((g:!((h:codeEditor,i:(fontScale:1.2899450879999999,j:1,source:'%23include+%3Cutility%3E%0A%0Ausing+namespace+std%3B%0A%0Astruct+P+%0A%7B%0A++std::pair%3Cconst+char*,+int%3E+pr%3B%0A%7D%3B%0A%0Aconstexpr+auto+pair_test()%0A%7B%0A++P+p%3B%0A++p.pr+%3D+make_pair(%22taxicab%22,+1729)%3B%0A++return+p%3B%0A%7D%0A%0Aint+main()%0A%7B%0A++constexpr+auto+p+%3D+pair_test()%3B%0A%7D%0A'),l:'5',n:'0',o:'C%2B%2B+source+%231',t:'0')),k:44.41586064715348,l:'4',n:'0',o:'',s:0,t:'0'),(g:!((g:!((h:compiler,i:(compiler:g7snapshot,filters:(b:'0',commentOnly:'0',directives:'0',intel:'0'),fontScale:1.2899450879999999,options:'-std%3Dc%2B%2B1z+-O3+-Wall+-Wextra',source:1),l:'5',n:'0',o:'x86-64+gcc+7+(snapshot)+(Editor+%231,+Compiler+%231)',t:'0')),k:43.26069218283827,l:'4',m:19.48608137044968,n:'0',o:'',s:0,t:'0'),(g:!((h:output,i:(compiler:1,editor:1),l:'5',n:'0',o:'%231+with+x86-64+gcc+7+(snapshot)',t:'0')),l:'4',m:80.51391862955032,n:'0',o:'',s:0,t:'0')),k:55.58413935284653,l:'3',n:'0',o:'',t:'0')),l:'2',n:'0',o:'',t:'0')),version:4"></iframe>
+#+REVEAL_HTML: <iframe width="1400px" height="600px" src="https://gcc.godbolt.org/e#g:!((g:!((g:!((h:codeEditor,i:(fontScale:1.2899450879999999,j:1,source:'%23include+%3Cutility%3E%0A%0Ausing+namespace+std%3B%0A%0Astruct+P+%0A%7B%0A++std::pair%3Cconst+char*,+int%3E+pr%3B%0A%7D%3B%0A%0Aconstexpr+auto+pair_test()%0A%7B%0A++P+p%3B%0A++p.pr+%3D+make_pair(%22taxicab%22,+1729)%3B%0A++return+p%3B%0A%7D%0A%0Aint+main()%0A%7B%0A++constexpr+auto+p+%3D+pair_test()%3B%0A%7D%0A'),l:'5',n:'0',o:'C%2B%2B+source+%231',t:'0')),k:44.41586064715348,l:'4',n:'0',o:'',s:0,t:'0'),(g:!((g:!((h:compiler,i:(compiler:g7snapshot,filters:(b:'0',commentOnly:'0',directives:'0',intel:'0'),fontScale:1.2899450879999999,options:'-std%3Dc%2B%2B1z+-O3+-Wall+-Wextra',source:1),l:'5',n:'0',o:'x86-64+gcc+7+(snapshot)+(Editor+%231,+Compiler+%231)',t:'0')),k:43.26069218283827,l:'4',m:19.48608137044968,n:'0',o:'',s:0,t:'0'),(g:!((h:output,i:(compiler:1,editor:1),l:'5',n:'0',o:'%231+with+x86-64+gcc+7+(snapshot)',t:'0')),l:'4',m:80.51391862955032,n:'0',o:'',s:0,t:'0')),k:55.58413935284653,l:'3',n:'0',o:'',t:'0')),l:'2',n:'0',o:'',t:'0')),version:4"></iframe>
 
 ** ~constexpr find_if~
-
 
 #+BEGIN_SRC c++
 template <class InputIt, class UnaryPredicate>
@@ -396,9 +456,9 @@ There's no technical reason for many algorithms not to be ~constexpr~.
 
 ** Other algorithms we made ~constexpr~
 
- - mismatch
- - equal
- - copy
+ - ~mismatch~
+ - ~equal~
+ - ~copy~
 
 ** JSON Value: First attempt
 
@@ -516,25 +576,53 @@ Nothing else is required if it does not get invoked.
 
 ** How to improve our containers
  
- - We could wrap objects in ~std::optional~ to allow for objects that are not defuault constructible
+ - We could wrap objects in ~std::optional~ to allow for objects that are not default constructible
  - It should be possible to templatize on ~constexpr~ enabled allocator, making these containers optionally ~constexpr~
 
-* Parsing JSON Values Literals
+* Parsing JSON Value Literals
 
-** Parsing
-#+REVEAL_HTML: <br>
-
+** What is a Parser?
+\\
 #+BEGIN_SRC haskell
 Parser a :: String -> [(a, String)]
 #+END_SRC
 "A parser for things is a function from strings to lists of pairs of things and strings."
 
--- [[http://www.willamette.edu/~fruehr/haskell/seuss.html][Dr Seuss on parsers]]
-
-#+REVEAL_HTML: <br><br>
-
+-- [[http://www.willamette.edu/~fruehr/haskell/seuss.html][Dr Seuss on parsers]]\\
+\\
+\\
 Or in our case something like:
 #+BEGIN_SRC c++
 template <typename T>
 using parser = auto (*)(string) -> list<pair<T, string>>;
 #+END_SRC
+
+** Parsers
+
+#+BEGIN_SRC c++
+template <typename T>
+using parser = auto (*)(string) -> list<pair<T, string>>;
+#+END_SRC
+
+Of course, we don't really mean quite this...
+
+#+ATTR_REVEAL: :frag (appear)
+ - ~string~ -> ~string_view~ (or compile-time stringlike thing)
+ - ~list~ -> ~optional~ (simpler)
+ - "function" -> "something invocable"
+
+#+BEGIN_NOTES
+Strings are any stringlike thing - ~string_view~ will do nicely since we're just
+reading this from a literal. The input is obvious, the output is the leftover
+part of the string after parsing a T.
+
+List represents optionality - a given string might have several ways it can be
+parsed. For simplicity we can just assume one way or error, i.e. optional.
+
+Of course we'll use the ~constexpr~ friendly ~pair~.
+
+And when we say "function" we mean the usual invocable things. Including ~constexpr~
+lambdas!
+#+END_NOTES
+
+* End

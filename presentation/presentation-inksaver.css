@@ -11,17 +11,13 @@
     color: rgb(231, 173, 82);
 }
 
-.reveal p code {
-    background-color: #222222;
-}
-
 .reveal a {
     text-transform: initial;
 }
 
 .reveal pre {
     font-family: Inconsolata;
-    font-size: 28px;
+    font-size: 24px;
 }
 
 .org-src-container pre {
@@ -30,15 +26,23 @@
     background-color: #fdf6e3;
 }
 
+#sec-title-slide h1,
+.reveal p,
+.reveal li,
+.reveal h1,
 .reveal h2,
-.reveal h3 {
-    color: rgb(238, 238, 238);
+.reveal h3,
+.reveal h4 {
+    color: black;
+}
+.reveal p code {
+    background-color: white;
 }
 
 #sec-title-slide h2,
 #sec-title-slide h3 {
     font-size: 60px;
-    color: rgb(238, 238, 238);
+    color: black;
 }
 
 .reveal .slide-number {
