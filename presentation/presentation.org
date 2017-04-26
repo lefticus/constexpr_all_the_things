@@ -777,4 +777,29 @@ that is allowed to grow and shrink at compile time only, requiring compiler supp
 
 [[./constexpr_vector.png]]
 
+* The Cost
+** Cognitive Cost
+
+#+ATTR_REVEAL: :frag (appear)
+ - Flat data structures are easy to reason about
+ - ~constexpr~ code forces you to consider what your code is doing and the lifetime of objects (in a good way).
+ - Tree like data structures are difficult to reason about
+ - Selecting data structure sizes can be difficult
+
+** Compile-time Cost - Debug Build
+
+#+ATTR_REVEAL: :frag (appear)
+ - 6GB RAM!
+ - >2 Minutes Build Time
+ - 338K Binary
+ - Tweaking debug level can have a great affect. This might be related to symbol sizes
+
+** Compile-time Cost - Release Build
+
+#+ATTR_REVEAL: :frag (appear)
+ - 328MB RAM!
+ - 5s Build Time
+ - 9K Binary
+
+
 * End
