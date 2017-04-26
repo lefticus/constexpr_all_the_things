@@ -631,4 +631,150 @@ And when we say "function" we mean the usual invocable things. Including ~conste
 lambdas!
 #+END_NOTES
 
+* The Future
+** The destructor problem
+
+Currently any type with a non-trivial destructor cannot be used in ~constexpr~ context.
+
+trivially destructible quiz time!
+
+** ~is_trivially_destructible~
+
+Does this ~static_assert~ succeed?
+
+#+BEGIN_SRC c++
+struct S {
+};
+
+static_assert(std::is_trivially_destructible<S>);
+#+END_SRC
+
+** ~is_trivially_destructible~
+
+Does this ~static_assert~ succeed?
+
+#+BEGIN_SRC c++
+struct S {
+  int i;
+};
+
+static_assert(std::is_trivially_destructible<S>);
+#+END_SRC
+
+** ~is_trivially_destructible~
+
+Does this ~static_assert~ succeed?
+
+#+BEGIN_SRC c++
+struct S {
+  std::unique_ptr<int> i;
+};
+
+static_assert(std::is_trivially_destructible<S>);
+#+END_SRC
+
+** ~is_trivially_destructible~
+
+Does this ~static_assert~ succeed?
+
+#+BEGIN_SRC c++
+struct S {
+  ~S() {}
+};
+
+static_assert(std::is_trivially_destructible<S>);
+#+END_SRC
+
+** Why is this a problem?
+
+It's easy to build a ~constexpr~ enabled type that can grow at runtime or fail to
+compile if it gets too big in ~constexpr~ context.
+
+#+BEGIN_SRC c++
+struct Container {
+  std::array<int, 10> data{};
+  std::size_t length = 0;
+  int *extra_data = nullptr;
+  void push_back(const int i) {
+    if (length >= data.size()) {
+      if (!extra_data) {
+        extra_data = new int[100];
+      }
+      extra_data[(length++) - data.size()] = i;
+    } else {
+      data[length++] = i;
+    }
+  }
+};
+#+END_SRC
+
+** Why is this a problem?
+
+But as soon as we add a destructor, the class is no longer usable in a ~constexpr~ context.
+
+So we can build this type, but we are required to leak memory if it grows beyond the static size!
+
+** Solutions to the ~constexpr~ destructor problem
+
+#+BEGIN_SRC c++
+struct Container {
+  ~Container() {
+    // this proposal allows for an empty constructor to be allowed
+    if constexpr(something) {
+      // do something
+    }
+  }
+};
+#+END_SRC
+
+** Solutions to the ~constexpr~ destructor problem
+
+#+BEGIN_SRC c++
+struct Container {
+  ~Container() {
+    // but why not treat it like any other constexpr code?
+    // allow it as long as only constexpr allowed actions
+    // happen at compile time?
+    if (extra_data) {
+      delete [] extra_data;
+    }
+  }
+};
+#+END_SRC
+
+** The debugging problem
+
+On which line does GCC report an error?
+
+#+BEGIN_SRC c++
+constexpr int do_something()
+{
+  int val[1]{};
+  return val[1];
+}
+
+int main()
+{
+  constexpr auto val = do_something();
+}
+#+END_SRC
+
+** The debugging problem
+
+Several times during debugging we had to take the code from compile time context 
+to runtime context to allow for actual debugging.
+
+** The debugging problem
+
+This proposal adds debugging capability at compile time.
+
+[[./constexpr_trace.png]]
+
+** ~constexpr_vector~
+
+This other proposal from the same author allows for a special type of ~constexpr_vector~
+that is allowed to grow and shrink at compile time only, requiring compiler support.
+
+[[./constexpr_vector.png]]
+
 * End
