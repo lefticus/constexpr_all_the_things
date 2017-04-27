@@ -646,7 +646,7 @@ Does this ~static_assert~ succeed?
 struct S {
 };
 
-static_assert(std::is_trivially_destructible<S>);
+static_assert(std::is_trivially_destructible<S>{});
 #+END_SRC
 
 ** ~is_trivially_destructible~
@@ -658,7 +658,7 @@ struct S {
   int i;
 };
 
-static_assert(std::is_trivially_destructible<S>);
+static_assert(std::is_trivially_destructible<S>{});
 #+END_SRC
 
 ** ~is_trivially_destructible~
@@ -670,7 +670,7 @@ struct S {
   std::unique_ptr<int> i;
 };
 
-static_assert(std::is_trivially_destructible<S>);
+static_assert(std::is_trivially_destructible<S>{});
 #+END_SRC
 
 ** ~is_trivially_destructible~
@@ -682,7 +682,7 @@ struct S {
   ~S() {}
 };
 
-static_assert(std::is_trivially_destructible<S>);
+static_assert(std::is_trivially_destructible<S>{});
 #+END_SRC
 
 ** Why is this a problem?
@@ -746,7 +746,7 @@ struct Container {
 
 On which line does GCC report an error?
 
-#+BEGIN_SRC c++
+#+BEGIN_SRC c++ -n
 constexpr int do_something()
 {
   int val[1]{};
