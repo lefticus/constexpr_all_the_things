@@ -47,7 +47,7 @@ if constexpr (jsv["feature-x-enabled"]) {
   // code for feature x
 } else {
   // code when feature x turned off
-}
+  }
 #+END_SRC
 
 #+BEGIN_NOTES
@@ -62,6 +62,8 @@ choice for a proof-of-concept.
  - Less cross-platform pain
 
 #+BEGIN_NOTES
+Jason talks about this.
+
 Doing work at compile-time instead of runtime. Obvious gain.
 
 Simplifying code through compile-time computation. No need for manual math,
@@ -73,6 +75,10 @@ the C++.
 
 *  ~constexpr~ History 101
 A Short, Incomplete (and Mostly Wrong?) History of ~constexpr~
+
+#+BEGIN_NOTES
+Ben to drive this section.
+#+END_NOTES
 
 ** ~constexpr~: The First Age
 #+ATTR_REVEAL: :frag (appear)
@@ -182,7 +188,6 @@ struct is_constexpr_default_constructible
   : decltype(has_constexpr_default_constructor<T>(0)){};
 #+END_SRC
 
-
 ** ~constexpr~ SFINAE?
 
 #+BEGIN_SRC c++
@@ -237,6 +242,10 @@ A JSON Value is a discriminated union of:\\
 \\
 Clearly this is going to need some sort of recursion. And we are going to need
 ~constexpr~ ways to deal with a string, a vector and a map.
+
+#+BEGIN_NOTES
+Jason to drive this section.
+#+END_NOTES
 
 ** ~constexpr~ strings
 \\
@@ -587,6 +596,13 @@ Nothing else is required if it does not get invoked.
 
 * Parsing JSON Value Literals
 
+Because we need some way to actually turn a string literal into our JSON
+representation.
+
+#+BEGIN_NOTES
+Ben drives this section.
+#+END_NOTES
+
 ** What is a Parser?
 \\
 #+BEGIN_SRC haskell
@@ -613,7 +629,7 @@ using parser = auto (*)(string) -> list<pair<T, string>>;
 Of course, we don't really mean quite this...
 
 #+ATTR_REVEAL: :frag (appear)
- - ~string~ -> ~string_view~ (or compile-time stringlike thing)
+ - ~string~ -> ~string_view~ (compile-time stringlike thing)
  - ~list~ -> ~optional~ (simpler)
  - "function" -> "something invocable"
 
@@ -631,7 +647,142 @@ And when we say "function" we mean the usual invocable things. Including ~conste
 lambdas!
 #+END_NOTES
 
+** A Simple Parser
+
+Let's have a couple of aliases that will make life simpler.
+#+BEGIN_SRC c++
+using parse_input_t = std::string_view;
+
+template <typename T>
+using parse_result_t = cx::optional<cx::pair<T, parse_input_t>>;
+#+END_SRC
+
+And let's make a parser that matches a single ~char~ that we give it.
+#+BEGIN_SRC c++
+auto match_char(parse_input_t s, char c) -> parse_result_t<char>
+{
+  if (s.empty() || s[0] != c) return std::nullopt;
+  return parse_result_t<char>(
+    cx::make_pair(c, parse_input_t(s.data()+1, s.size()-1)));
+}
+#+END_SRC
+
+#+BEGIN_NOTES
+This is what a parser does: either matches or not (hence the optional) and if it
+matches, returns the value matched and the rest of the string for use in future
+parsers.
+#+END_NOTES
+
+** A Simple Parser
+#+BEGIN_SRC c++
+// Ceci n'est pas une parser.
+auto match_char(parse_input_t s, char c) -> parse_result_t<char>;
+#+END_SRC
+
+~match_char~ isn't actually a parser, because it has the wrong signature.\\
+\\
+
+#+BEGIN_SRC c++
+// This is the signature of a parser.
+template <typename T>
+using parser = auto (*)(parse_input_t s) -> parse_result_t<T>;
+#+END_SRC
+
+But now that we have ~constexpr~ lambdas, we can write a function that returns a
+parser.
+
+** A Simple Parser
+#+BEGIN_SRC c++
+constexpr auto make_char_parser(char c)
+{
+  return [=] (parse_input_t s) -> parse_result_t<char> {
+    if (s.empty() || s[0] != c) return std::nullopt;
+    return parse_result_t<char>(
+        cx::make_pair(c, parse_input_t(s.data()+1, s.size()-1)));
+  };
+}
+#+END_SRC
+The lambda returned from ~make_char_parser~ is a parser that will match the
+given ~char~.
+
+** More useful primitive parsers
+So far we can match one ~char~. Because fundamentally parsing works on
+"strings", there are a couple of other parsers that will be useful.
+
+#+BEGIN_SRC c++
+// parse one of a set of chars
+constexpr auto one_of(std::string_view chars)
+{
+  return [=] (parse_input_t s) -> parse_result_t<char> {
+    if (s.empty()) return std::nullopt;
+    // basic_string_view::find is supposed to be constexpr, but no...
+    auto j = cx::find(chars.cbegin(), chars.cend(), s[0]);
+    if (j != chars.cend()) {
+      return parse_result_t<char>(
+          cx::make_pair(s[0], parse_input_t(s.data()+1, s.size()-1)));
+    }
+    return std::nullopt;
+  };
+}
+#+END_SRC
+
+** More useful primitive parsers
+
+And you can imagine how to write these.
+
+#+BEGIN_SRC c++
+// the opposite of one_of: match a char that isn't any of the given set
+constexpr auto none_of(std::string_view chars)
+{
+  return [=] (parse_input_t s) -> parse_result_t<char> {
+    ...
+  };
+}
+
+// match a given string
+constexpr auto make_string_parser(std::string_view str)
+{
+  return [=] (parse_input_t s) -> parse_result_t<std::string_view> {
+    // here we could use a constexpr version of
+    // std::mismatch...
+    ...
+  };
+}
+#+END_SRC
+
+** Building up
+\\
+So far we have a few primitive parsers.\\
+\\
+\\
+In order to simply build up more complex parsers, we need to be able to combine
+parsers in various ways.
+
+** Building up
+Some basic things we will want to do:
+
+ - Change the result type of a parser (~fmap~)
+ - Run one parser, then a second one based on what the first returned (~bind~)
+ - Run one parser, and if it fails run another (~operator|~)
+ - Run two parsers in succession and combine the outputs (~combine~)
+ - Run a parser multiple times and aggregate the results (~many~, ~many1~, ~zero_or_one~)
+
+(Pick your functional pattern.)
+
+#+BEGIN_NOTES
+Some suggested names for the operations involved.
+
+~operator|~ is the monoid operation (with the parser that always fails as the unit).
+
+~combine~ is the applicative operation.
+#+END_NOTES
+
 * The Future
+
+#+BEGIN_NOTES
+Jason to talk through this section.
+#+END_NOTES
+
 ** The destructor problem
 
 Currently any type with a non-trivial destructor cannot be used in ~constexpr~ context.
@@ -646,7 +797,7 @@ Does this ~static_assert~ succeed?
 struct S {
 };
 
-static_assert(std::is_trivially_destructible<S>{});
+static_assert(std::is_trivially_destructible_v<S>);
 #+END_SRC
 
 ** ~is_trivially_destructible~
@@ -658,7 +809,7 @@ struct S {
   int i;
 };
 
-static_assert(std::is_trivially_destructible<S>{});
+static_assert(std::is_trivially_destructible_v<S>);
 #+END_SRC
 
 ** ~is_trivially_destructible~
@@ -670,7 +821,7 @@ struct S {
   std::unique_ptr<int> i;
 };
 
-static_assert(std::is_trivially_destructible<S>{});
+static_assert(std::is_trivially_destructible_v<S>);
 #+END_SRC
 
 ** ~is_trivially_destructible~
@@ -682,7 +833,7 @@ struct S {
   ~S() {}
 };
 
-static_assert(std::is_trivially_destructible<S>{});
+static_assert(std::is_trivially_destructible_v<S>);
 #+END_SRC
 
 ** Why is this a problem?
@@ -777,6 +928,22 @@ that is allowed to grow and shrink at compile time only, requiring compiler supp
 
 [[./constexpr_vector.png]]
 
+* ~constexpr~ STL possibilities
+** algorithms
+Weakened complexity guarantees on ~stable_sort~, ~inplace_merge~, ~stable_partition~?
+(They make use of temporary buffers to improve complexity.)
+
+Are there others that might need to have weakened complexity guarantees for compile time use?
+
+** iterators
+If you have a ~constexpr~ container, you want the iterators to all be ~constexpr~.
+
+Many iterators could be ~constexpr~ and usable in a ~constexpr~ context if the
+operations on the corresponding containers are.
+
+e.g. if you have ~constexpr push_back~ on your ~constexpr vector~ type, then
+~back_insert_iterator~ could easily be ~constexpr~.
+
 * The Cost
 ** Cognitive Cost
 
@@ -792,7 +959,7 @@ that is allowed to grow and shrink at compile time only, requiring compiler supp
  - 6GB RAM!
  - >2 Minutes Build Time
  - 338K Binary
- - Tweaking debug level can have a great affect. This might be related to symbol sizes
+ - Tweaking debug level can have a great effect. This might be related to symbol sizes.
 
 ** Compile-time Cost - Release Build
 
@@ -800,6 +967,5 @@ that is allowed to grow and shrink at compile time only, requiring compiler supp
  - 328MB RAM!
  - 5s Build Time
  - 9K Binary
-
 
 * End
