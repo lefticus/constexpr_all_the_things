@@ -619,6 +619,11 @@ template <typename T>
 using parser = auto (*)(string) -> list<pair<T, string>>;
 #+END_SRC
 
+#+BEGIN_NOTES
+This serendipitous phrase is due to Fritz Ruehr, a functional programming
+lecturer at Willamette University.
+#+END_NOTES
+
 ** Parsers
 
 #+BEGIN_SRC c++
@@ -765,7 +770,6 @@ Some basic things we will want to do:
  - Run one parser, then a second one based on what the first returned (~bind~)
  - Run one parser, and if it fails run another (~operator|~)
  - Run two parsers in succession and combine the outputs (~combine~)
- - Run a parser multiple times and aggregate the results (~many~, ~many1~, ~zero_or_one~)
 
 (Pick your functional pattern.)
 
@@ -775,7 +779,191 @@ Some suggested names for the operations involved.
 ~operator|~ is the monoid operation (with the parser that always fails as the unit).
 
 ~combine~ is the applicative operation.
+
+I'll show you a few of these combinators so you can get a feel for them.
 #+END_NOTES
+
+** Changing the result type (~fmap~)
+#+BEGIN_SRC haskell
+fmap :: (a -> b) -> Parser a -> Parser b
+#+END_SRC
+
+#+BEGIN_SRC c++
+// fmap a function into a parser.
+template <typename F, typename P>
+constexpr auto fmap(F&& f, P&& p)
+{
+  using R = parse_result_t<std::result_of_t<F(parse_t<P>)>>;
+  return [f = std::forward<F>(f),
+          p = std::forward<P>(p)] (parse_input_t i) -> R {
+           const auto r = p(i);
+           if (!r) return std::nullopt;
+           return R(cx::make_pair(f(r->first), r->second));
+         };
+}
+#+END_SRC
+
+#+BEGIN_NOTES
+~parse_t~ here is just a way of getting the parsed type back out of the parser
+without all the optional/pair business.
+
+Note what fmap returns is a parser.
+
+Think about a simple case of turning a char into an int.
+#+END_NOTES
+
+** Alternation (~operator|~)
+#+BEGIN_SRC haskell
+operator| :: Parser a -> Parser a -> Parser a
+#+END_SRC
+
+#+BEGIN_SRC c++
+  template <typename P1, typename P2,
+            std::enable_if_t<std::is_same_v<parse_t<P1>, parse_t<P2>>, int> = 0>
+  constexpr auto operator|(P1&& p1, P2&& p2) {
+    return [=] (parse_input_t i) {
+      const auto r1 = p1(i);
+      if (r1) return r1;
+      return p2(i);
+    };
+  }
+#+END_SRC
+
+** Conjunction (~combine~)
+#+BEGIN_SRC haskell
+combine :: Parser a -> Parser b -> (a -> b -> c) -> Parser c
+#+END_SRC
+
+#+BEGIN_SRC c++
+  template <typename P1, typename P2, typename F,
+            typename R = std::result_of_t<F(parse_t<P1>, parse_t<P2>)>>
+  constexpr auto combine(P1&& p1, P2&& p2, F&& f) {
+    return [=] (parse_input_t i) -> parse_result_t<R> {
+             const auto r1 = p1(i);
+             if (!r1) return std::nullopt;
+             const auto r2 = p2(r1->second);
+             if (!r2) return std::nullopt;
+             return parse_result_t<R>(
+                 cx::make_pair(f(r1->first, r2->first), r2->second));
+           };
+  }
+#+END_SRC
+
+** Useful ~combine~ patterns
+#+BEGIN_SRC haskell
+operator> :: Parser a -> Parser b -> Parser a
+operator< :: Parser a -> Parser b -> Parser b
+#+END_SRC
+
+#+BEGIN_SRC c++
+  template <typename P1, typename P2,
+            typename = parse_t<P1>, typename = parse_t<P2>>
+  constexpr auto operator<(P1&& p1, P2&& p2) {
+    return combine(std::forward<P1>(p1),
+                   std::forward<P2>(p2),
+                   [] (auto, const auto& r) { return r; });
+  }
+#+END_SRC
+
+These operators are useful for throwing away the left or right hand side of ~combine~.
+
+** Accumulating combinators
+And now you begin to see where this is heading...
+
+#+BEGIN_SRC haskell
+many :: Parser a -> b -> (b -> a -> b)  -> Parser b
+many1 :: Parser a -> b -> (b -> a -> b)  -> Parser b
+exactly_n :: Parser a -> int -> b -> (b -> a -> b) -> Parser b
+separated_by :: Parser a -> Parser x -> b -> (b -> a -> b) -> Parser b
+#+END_SRC
+
+These are starting to look like building blocks we can use to parse real things.
+
+#+BEGIN_NOTES
+Explain each of these function signatures.
+#+END_NOTES
+
+** Some simple examples
+This parser eats whitespace.
+
+#+BEGIN_SRC c++
+  constexpr auto skip_whitespace()
+  {
+    constexpr auto ws_parser =
+      make_char_parser(' ')
+      | make_char_parser('\t')
+      | make_char_parser('\n')
+      | make_char_parser('\r');
+    return many(ws_parser, std::monostate{}, [] (auto m, auto) { return m; });
+  }
+#+END_SRC
+
+** Some simple examples
+This parses a decimal integer.
+#+BEGIN_SRC c++
+  constexpr auto int_parser()
+  {
+    return bind(one_of("123456789"sv),
+                [] (char x, parse_input_t rest) {
+                  return many(one_of("0123456789"sv),
+                              static_cast<int>(x - '0'),
+                              [] (int acc, char c) { return (acc*10) + (c-'0'); })(rest);
+                });
+  }
+#+END_SRC
+First any non-zero digit, then zero or more digits,\\
+building up the integer in the obvious way.
+
+** Some simple examples
+This (very simply) parses a string.
+#+BEGIN_SRC c++
+  constexpr auto string_parser()
+  {
+    constexpr auto quote_parser = make_char_parser('"');
+    const auto str_parser =
+      many(none_of("\""sv),
+           cx::string{},
+           [] (auto acc, char c) {
+             acc.push_back(c);
+             return acc;
+           });
+    return quote_parser < str_parser > quote_parser;
+  }
+#+END_SRC
+
+#+BEGIN_NOTES
+For the sake of simplicity, we aren't dealing with escaped characters, unicode
+points, etc.
+
+In fact for this simple example we could be accumulating a ~string_view~. But in
+general when we come to parse escaped characters, the input characters don't
+have a 1-to-1 mapping with the output characters.
+#+END_NOTES
+
+** Getting to JSON
+We now have a reasonable toolkit for building parsers.
+#+BEGIN_SRC c++
+  template <size_t Depth=5>
+  struct JSON_Value
+  {
+    ...
+    struct Data
+    {
+      bool boolean{false};
+      double number{0};
+      cx::static_string string;
+      cx::vector<JSON_Value<Depth-1>, max_vector_size> array;
+      cx::map<cx::static_string, JSON_Value<Depth-1>, max_map_size> object;
+    };
+    ...
+  };
+#+END_SRC
+To parse our JSON value, a reasonable approach is to use alternation on parsers
+for each type of value.
+
+** Parsing our ~JSON_Value~
+
+
 
 * The Future
 

@@ -32,8 +32,8 @@
 <script type="text/javascript" src="./presentation.js"></script>
 
 <section>
-<section id="slide-org9e8eceb">
-<h2 id="org9e8eceb">Don't Bury The Lede</h2>
+<section id="slide-orgfb46eeb">
+<h2 id="orgfb46eeb">Don't Bury The Lede</h2>
 <p>
 We want to do this:
 </p>
@@ -68,8 +68,8 @@ choice for a proof-of-concept.
 </section>
 </section>
 <section>
-<section id="slide-org814eb06">
-<h2 id="org814eb06">The Promise of <code>constexpr</code></h2>
+<section id="slide-org97cc936">
+<h2 id="org97cc936">The Promise of <code>constexpr</code></h2>
 <ul>
 <li>Runtime efficiency</li>
 <li>Clearer code, fewer magic numbers</li>
@@ -101,8 +101,8 @@ the C++.
 </section>
 </section>
 <section>
-<section id="slide-orgc7b5983">
-<h2 id="orgc7b5983"><code>constexpr</code> History 101</h2>
+<section id="slide-orga023ded">
+<h2 id="orga023ded"><code>constexpr</code> History 101</h2>
 <p>
 A Short, Incomplete (and Mostly Wrong?) History of <code>constexpr</code>
 </p>
@@ -115,8 +115,8 @@ Ben to drive this section.
 </aside>
 
 </section>
-<section id="slide-org93b2bdd">
-<h3 id="org93b2bdd"><code>constexpr</code>: The First Age</h3>
+<section id="slide-org9a8e520">
+<h3 id="org9a8e520"><code>constexpr</code>: The First Age</h3>
 <ul>
 <li class="fragment appear">One (<code>return</code>) expression per function was allowed</li>
 <li class="fragment appear"><code>constexpr</code> math functions explored</li>
@@ -138,8 +138,8 @@ the throw trick for forcing compile-time evaluation.
 </aside>
 
 </section>
-<section id="slide-orgdc1820c">
-<h3 id="orgdc1820c"><code>constexpr</code>: End of the First Age</h3>
+<section id="slide-orgaa05d9e">
+<h3 id="orgaa05d9e"><code>constexpr</code>: End of the First Age</h3>
 <div class="org-src-container">
 
 <pre  class="src src-c++"><span style="color: #bebebe;">// </span><span style="color: #bebebe;">1. Fall of Gondolin</span>
@@ -163,8 +163,8 @@ At this point most people are probably familiar with this or something like it.
 </aside>
 
 </section>
-<section id="slide-org67b680d">
-<h3 id="org67b680d"><code>constexpr</code>: The Second Age</h3>
+<section id="slide-org1b8e392">
+<h3 id="org1b8e392"><code>constexpr</code>: The Second Age</h3>
 <ul>
 <li class="fragment appear">Generalized <code>constexpr</code> supported by Visual C++</li>
 <li class="fragment appear">Compile-time computation/optimization popularized by <a href="https://www.youtube.com/playlist?list=PLs3KjaCtOwSZ2tbuV1hx8Xz-rFZTan2J1"><i>C++ Weekly</i></a> et al.</li>
@@ -182,8 +182,8 @@ seems to be string hashing.
 </aside>
 
 </section>
-<section id="slide-org377cfde">
-<h3 id="org377cfde"><code>constexpr</code>: End of the Second Age</h3>
+<section id="slide-orgf64204a">
+<h3 id="orgf64204a"><code>constexpr</code>: End of the Second Age</h3>
 
 <div class="figure">
 <p><img src="./cpp14_murmur.png" alt="cpp14_murmur.png" />
@@ -196,8 +196,8 @@ and cuts the One Ring from Sauron's hand.)
 </p>
 
 </section>
-<section id="slide-orgcaf8816">
-<h3 id="orgcaf8816"><code>constexpr</code>: The Third Age?</h3>
+<section id="slide-orga015d8a">
+<h3 id="orga015d8a"><code>constexpr</code>: The Third Age?</h3>
 <ul>
 <li class="fragment appear"><code>constexpr</code> lambdas</li>
 <li class="fragment appear"><code>if constexpr</code></li>
@@ -230,8 +230,8 @@ New STL features are born with <code>constexpr</code> (somewhat) in mind: <code>
 </section>
 </section>
 <section>
-<section id="slide-orgc45ec3b">
-<h2 id="orgc45ec3b">A problem with <code>constexpr</code></h2>
+<section id="slide-orga706ed5">
+<h2 id="orga706ed5">A problem with <code>constexpr</code></h2>
 
 <div class="figure">
 <p><img src="./constexpr_problem.png" alt="constexpr_problem.png" />
@@ -243,8 +243,8 @@ The inability to use different runtime and compile time algorithms.
 </p>
 
 </section>
-<section id="slide-org4d32c37">
-<h3 id="org4d32c37"><code>constexpr</code> SFINAE?</h3>
+<section id="slide-org5f20e7e">
+<h3 id="org5f20e7e"><code>constexpr</code> SFINAE?</h3>
 <p>
 A partial solution, perhaps.
 </p>
@@ -264,8 +264,8 @@ We would <i>like</i> the second call to <code>fnv1</code> to use an efficient ru
 </p>
 
 </section>
-<section id="slide-org31b8f54">
-<h3 id="org31b8f54"><code>constexpr</code> SFINAE?</h3>
+<section id="slide-org8bbd446">
+<h3 id="org8bbd446"><code>constexpr</code> SFINAE?</h3>
 <p>
 You <i>can</i> do something like this&#x2026;
 </p>
@@ -288,8 +288,8 @@ You <i>can</i> do something like this&#x2026;
 </div>
 
 </section>
-<section id="slide-org1a75b31">
-<h3 id="org1a75b31"><code>constexpr</code> SFINAE?</h3>
+<section id="slide-org567f11e">
+<h3 id="org567f11e"><code>constexpr</code> SFINAE?</h3>
 <div class="org-src-container">
 
 <pre  class="src src-c++"><span style="color: #a020f0;">template</span> <span style="color: #707183;">&lt;</span><span style="color: #a020f0;">typename</span> <span style="color: #228b22;">StringType</span><span style="color: #707183;">&gt;</span>
@@ -323,8 +323,8 @@ completely different types for use at compile time and runtime.
 </aside>
 
 </section>
-<section id="slide-org4ced292">
-<h3 id="org4ced292"><code>constexpr</code> SFINAE?</h3>
+<section id="slide-orgc0a3f18">
+<h3 id="orgc0a3f18"><code>constexpr</code> SFINAE?</h3>
 <p>
 Another possible (better) solution.
 </p>
@@ -338,8 +338,8 @@ Another possible (better) solution.
 </section>
 </section>
 <section>
-<section id="slide-orgb65f581">
-<h2 id="orgb65f581">Building <code>constexpr</code> JSON Values</h2>
+<section id="slide-org9834be0">
+<h2 id="org9834be0">Building <code>constexpr</code> JSON Values</h2>
 <p>
 Two problems to solve:
 </p>
@@ -353,8 +353,8 @@ Two problems to solve:
 </section>
 </section>
 <section>
-<section id="slide-org3a3a95b">
-<h2 id="org3a3a95b">Representing JSON Values</h2>
+<section id="slide-org39aaf27">
+<h2 id="org39aaf27">Representing JSON Values</h2>
 <p>
 A JSON Value is a discriminated union of:<br />
 <br />
@@ -383,8 +383,8 @@ Jason to drive this section.
 </aside>
 
 </section>
-<section id="slide-org02156c0">
-<h3 id="org02156c0"><code>constexpr</code> strings</h3>
+<section id="slide-org84a61e6">
+<h3 id="org84a61e6"><code>constexpr</code> strings</h3>
 <p>
 <br />
 First, <code>std::string_view</code> is great, and <i>mostly</i> <code>constexpr</code><br />
@@ -403,8 +403,8 @@ it doesn't deal with building strings, and is not intended for <i>storing</i> st
 </aside>
 
 </section>
-<section id="slide-orgcc0c985">
-<h3 id="orgcc0c985"><code>constexpr</code> strings</h3>
+<section id="slide-orgbe2c548">
+<h3 id="orgbe2c548"><code>constexpr</code> strings</h3>
 <p>
 <br />
 We need a way to pass, store, and in general, work with<br />
@@ -420,8 +420,8 @@ For this, we built up the <code>static_string</code> class.
 </p>
 
 </section>
-<section id="slide-org5ecd1a2">
-<h3 id="org5ecd1a2"><code>constexpr</code> strings</h3>
+<section id="slide-orgc34901a">
+<h3 id="orgc34901a"><code>constexpr</code> strings</h3>
 <div class="org-src-container">
 
 <pre  class="src src-c++"><span style="color: #a020f0;">struct</span> <span style="color: #228b22;">static_string</span>
@@ -448,8 +448,8 @@ For this, we built up the <code>static_string</code> class.
 </div>
 
 </section>
-<section id="slide-orgd7ad9c7">
-<h3 id="orgd7ad9c7"><code>constexpr</code> vectors</h3>
+<section id="slide-org7f79be9">
+<h3 id="org7f79be9"><code>constexpr</code> vectors</h3>
 <div class="org-src-container">
 
 <pre  class="src src-c++"><span style="color: #a020f0;">template</span> <span style="color: #707183;">&lt;</span><span style="color: #a020f0;">typename</span> <span style="color: #228b22;">Value</span>, <span style="color: #008b8b;">std</span>::<span style="color: #228b22;">size_t</span> <span style="color: #a0522d;">Size</span> = <span style="color: #008b8b;">5</span><span style="color: #707183;">&gt;</span>
@@ -474,8 +474,8 @@ Obviously we need to know the max size at compile time.
 </aside>
 
 </section>
-<section id="slide-orgc499011">
-<h3 id="orgc499011"><code>constexpr</code> vectors</h3>
+<section id="slide-orgf996761">
+<h3 id="orgf996761"><code>constexpr</code> vectors</h3>
 <div class="org-src-container">
 
 <pre  class="src src-c++"><span style="color: #a020f0;">using</span> <span style="color: #228b22;">iterator</span> = <span style="color: #a020f0;">typename</span> <span style="color: #008b8b;">storage_t</span>::<span style="color: #228b22;">iterator</span>;
@@ -512,8 +512,8 @@ statically sized vector.
 
 
 </section>
-<section id="slide-org6d293aa">
-<h3 id="org6d293aa">Why not <code>std::next</code>?</h3>
+<section id="slide-org7c545c8">
+<h3 id="org7c545c8">Why not <code>std::next</code>?</h3>
 <p>
 In GCC's implementation: internal <code>__iterator_category</code> is not <code>constexpr</code> constructible.
 </p>
@@ -521,8 +521,8 @@ In GCC's implementation: internal <code>__iterator_category</code> is not <code>
 <iframe width="1400px" height="600px" src="https://gcc.godbolt.org/e#g:!((g:!((g:!((h:codeEditor,i:(fontScale:1.2899450879999999,j:1,source:'%23include+%3Carray%3E%0A%23include+%3Citerator%3E%0A%0Ausing+namespace+std%3B%0A%0Aconstexpr+array%3Cint,+5%3E+foo+%3D+%7B1,2,3,4,5%7D%3B%0A%0Aconstexpr+auto+third_of_foo()%0A%7B%0A++return+next(foo.cbegin(),+3)%3B%0A%7D%0A%0Aint+main()%0A%7B%0A++constexpr+auto+i+%3D+*third_of_foo()%3B%0A%7D%0A'),l:'5',n:'0',o:'C%2B%2B+source+%231',t:'0')),k:44.41586064715348,l:'4',n:'0',o:'',s:0,t:'0'),(g:!((g:!((h:compiler,i:(compiler:g7snapshot,filters:(b:'0',commentOnly:'0',directives:'0',intel:'0'),fontScale:1.5479341055999998,options:'-std%3Dc%2B%2B1z+-O3+-Wall+-Wextra',source:1),l:'5',n:'0',o:'x86-64+gcc+7+(snapshot)+(Editor+%231,+Compiler+%231)',t:'0')),k:43.26069218283827,l:'4',m:21.627408993576015,n:'0',o:'',s:0,t:'0'),(g:!((h:output,i:(compiler:1,editor:1),l:'5',n:'0',o:'%231+with+x86-64+gcc+7+(snapshot)',t:'0')),l:'4',m:78.37259100642399,n:'0',o:'',s:0,t:'0')),k:55.58413935284653,l:'3',n:'0',o:'',t:'0')),l:'2',n:'0',o:'',t:'0')),version:4"></iframe>
 
 </section>
-<section id="slide-org3617fdb">
-<h3 id="org3617fdb"><code>constexpr</code> vectors</h3>
+<section id="slide-orga9907bd">
+<h3 id="orga9907bd"><code>constexpr</code> vectors</h3>
 <p>
 This allows for natural use of the <code>vector</code> type
 </p>
@@ -535,8 +535,8 @@ vec.push_back<span style="color: #707183;">(</span><span style="color: #008b8b;"
 </div>
 
 </section>
-<section id="slide-org97ea9b0">
-<h3 id="org97ea9b0"><code>constexpr</code> vectors</h3>
+<section id="slide-orgd4aeb14">
+<h3 id="orgd4aeb14"><code>constexpr</code> vectors</h3>
 <p>
 Or put into a <code>constexpr</code> context
 </p>
@@ -557,15 +557,15 @@ Or put into a <code>constexpr</code> context
 </div>
 
 </section>
-<section id="slide-org98317b0">
-<h3 id="org98317b0">mutable <code>constexpr</code> strings</h3>
+<section id="slide-org0c72379">
+<h3 id="org0c72379">mutable <code>constexpr</code> strings</h3>
 <p>
 And now we can build a mutable <code>constexpr</code> string by inheriting from our <code>vector</code>
 </p>
 
 </section>
-<section id="slide-orge283326">
-<h3 id="orge283326">mutable <code>constexpr</code> strings</h3>
+<section id="slide-org40bb21c">
+<h3 id="org40bb21c">mutable <code>constexpr</code> strings</h3>
 <div class="org-src-container">
 
 <pre  class="src src-c++"><span style="color: #a020f0;">template</span> <span style="color: #707183;">&lt;</span><span style="color: #a020f0;">typename</span> <span style="color: #228b22;">CharType</span>, <span style="color: #228b22;">size_t</span> <span style="color: #a0522d;">Size</span><span style="color: #707183;">&gt;</span>
@@ -592,8 +592,8 @@ This relies on:
 </ul>
 
 </section>
-<section id="slide-org13e09de">
-<h3 id="org13e09de"><code>constexpr</code> maps</h3>
+<section id="slide-org2cf9620">
+<h3 id="org2cf9620"><code>constexpr</code> maps</h3>
 <div class="org-src-container">
 
 <pre  class="src src-c++"><span style="color: #a020f0;">template</span> <span style="color: #707183;">&lt;</span><span style="color: #a020f0;">typename</span> <span style="color: #228b22;">Key</span>, <span style="color: #a020f0;">typename</span> <span style="color: #228b22;">Value</span>, <span style="color: #008b8b;">std</span>::<span style="color: #228b22;">size_t</span> <span style="color: #a0522d;">Size</span> = <span style="color: #008b8b;">5</span><span style="color: #707183;">&gt;</span>
@@ -612,8 +612,8 @@ This relies on:
 </div>
 
 </section>
-<section id="slide-org50d8675">
-<h3 id="org50d8675"><code>constexpr</code> maps</h3>
+<section id="slide-org272a7b5">
+<h3 id="org272a7b5"><code>constexpr</code> maps</h3>
 <div class="org-src-container">
 
 <pre  class="src src-c++"><span style="color: #a020f0;">auto</span> <span style="color: #0000ff;">get_colors</span><span style="color: #707183;">()</span> <span style="color: #707183;">{</span>
@@ -632,8 +632,8 @@ This relies on:
 </div>
 
 </section>
-<section id="slide-org74d7760">
-<h3 id="org74d7760">Why not <code>std::pair</code>?</h3>
+<section id="slide-orge3e3451">
+<h3 id="orge3e3451">Why not <code>std::pair</code>?</h3>
 <p>
 Standard library definition does not have <code>constexpr operator=</code> <br />
 for <code>std::pair</code><br />
@@ -644,8 +644,8 @@ This is the only aspect of <code>std::pair</code> that is not <code>constexpr</c
 <iframe width="1400px" height="600px" src="https://gcc.godbolt.org/e#g:!((g:!((g:!((h:codeEditor,i:(fontScale:1.2899450879999999,j:1,source:'%23include+%3Cutility%3E%0A%0Ausing+namespace+std%3B%0A%0Astruct+P+%0A%7B%0A++std::pair%3Cconst+char*,+int%3E+pr%3B%0A%7D%3B%0A%0Aconstexpr+auto+pair_test()%0A%7B%0A++P+p%3B%0A++p.pr+%3D+make_pair(%22taxicab%22,+1729)%3B%0A++return+p%3B%0A%7D%0A%0Aint+main()%0A%7B%0A++constexpr+auto+p+%3D+pair_test()%3B%0A%7D%0A'),l:'5',n:'0',o:'C%2B%2B+source+%231',t:'0')),k:44.41586064715348,l:'4',n:'0',o:'',s:0,t:'0'),(g:!((g:!((h:compiler,i:(compiler:g7snapshot,filters:(b:'0',commentOnly:'0',directives:'0',intel:'0'),fontScale:1.2899450879999999,options:'-std%3Dc%2B%2B1z+-O3+-Wall+-Wextra',source:1),l:'5',n:'0',o:'x86-64+gcc+7+(snapshot)+(Editor+%231,+Compiler+%231)',t:'0')),k:43.26069218283827,l:'4',m:19.48608137044968,n:'0',o:'',s:0,t:'0'),(g:!((h:output,i:(compiler:1,editor:1),l:'5',n:'0',o:'%231+with+x86-64+gcc+7+(snapshot)',t:'0')),l:'4',m:80.51391862955032,n:'0',o:'',s:0,t:'0')),k:55.58413935284653,l:'3',n:'0',o:'',t:'0')),l:'2',n:'0',o:'',t:'0')),version:4"></iframe>
 
 </section>
-<section id="slide-org0f74d4f">
-<h3 id="org0f74d4f"><code>constexpr find_if</code></h3>
+<section id="slide-orgb5d65de">
+<h3 id="orgb5d65de"><code>constexpr find_if</code></h3>
 <div class="org-src-container">
 
 <pre  class="src src-c++"><span style="color: #a020f0;">template</span> <span style="color: #707183;">&lt;</span><span style="color: #a020f0;">class</span> <span style="color: #228b22;">InputIt</span>, <span style="color: #a020f0;">class</span> <span style="color: #228b22;">UnaryPredicate</span><span style="color: #707183;">&gt;</span>
@@ -669,8 +669,8 @@ There's no technical reason for many algorithms not to be <code>constexpr</code>
 </aside>
 
 </section>
-<section id="slide-org57c541b">
-<h3 id="org57c541b">Let's make them all <code>constexpr</code> already</h3>
+<section id="slide-org967e9c7">
+<h3 id="org967e9c7">Let's make them all <code>constexpr</code> already</h3>
 
 <div class="figure">
 <p><img src="./bryce_tweet.png" alt="bryce_tweet.png" />
@@ -678,8 +678,8 @@ There's no technical reason for many algorithms not to be <code>constexpr</code>
 </div>
 
 </section>
-<section id="slide-org94e0ccb">
-<h3 id="org94e0ccb">Other algorithms we made <code>constexpr</code></h3>
+<section id="slide-org00fa123">
+<h3 id="org00fa123">Other algorithms we made <code>constexpr</code></h3>
 <ul>
 <li><code>mismatch</code></li>
 <li><code>equal</code></li>
@@ -688,8 +688,8 @@ There's no technical reason for many algorithms not to be <code>constexpr</code>
 </ul>
 
 </section>
-<section id="slide-org31baef3">
-<h3 id="org31baef3">JSON Value: First attempt</h3>
+<section id="slide-org6dfed3b">
+<h3 id="org6dfed3b">JSON Value: First attempt</h3>
 <div class="org-src-container">
 
 <pre  class="src src-c++"><span style="color: #a020f0;">template</span> <span style="color: #707183;">&lt;</span><span style="color: #228b22;">size_t</span> <span style="color: #a0522d;">Depth</span>=<span style="color: #008b8b;">5</span><span style="color: #707183;">&gt;</span>
@@ -729,8 +729,8 @@ The max sizes for arrays and objects are determined empirically.
 </aside>
 
 </section>
-<section id="slide-org7fd4e4b">
-<h3 id="org7fd4e4b">JSON Value: First attempt</h3>
+<section id="slide-org05c4eeb">
+<h3 id="org05c4eeb">JSON Value: First attempt</h3>
 <div class="org-src-container">
 
 <pre  class="src src-c++"><span style="color: #a020f0;">struct</span> <span style="color: #228b22;">JSON_Value</span>
@@ -759,8 +759,8 @@ The max sizes for arrays and objects are determined empirically.
 </div>
 
 </section>
-<section id="slide-orgbbbd4fe">
-<h3 id="orgbbbd4fe">JSON Value: First attempt</h3>
+<section id="slide-org3b621c1">
+<h3 id="org3b621c1">JSON Value: First attempt</h3>
 <div class="org-src-container">
 
 <pre  class="src src-c++"><span style="color: #008b8b;">cx</span>::<span style="color: #228b22;">JSON_Value</span> <span style="color: #a0522d;">j</span><span style="color: #707183;">{}</span>;
@@ -782,8 +782,8 @@ deduction here so we don't need to say <code>cx::JSON_Value&lt;&gt; j{};</code>
 </aside>
 
 </section>
-<section id="slide-org1bde039">
-<h3 id="org1bde039">Why not <code>std::variant</code> ?</h3>
+<section id="slide-orga36f7c3">
+<h3 id="orga36f7c3">Why not <code>std::variant</code> ?</h3>
 <p>
 Similarly to <code>std::pair</code>, <code>std::variant</code> is missing some key <code>constexpr</code> support.
 </p>
@@ -797,8 +797,8 @@ Similarly to <code>std::pair</code>, <code>std::variant</code> is missing some k
 </ul>
 
 </section>
-<section id="slide-org499dcd0">
-<h3 id="org499dcd0">Requirements for compile-time types</h3>
+<section id="slide-orgad5c69f">
+<h3 id="orgad5c69f">Requirements for compile-time types</h3>
 <p>
 Huge list! Are you ready?! 
 </p>
@@ -814,8 +814,8 @@ Nothing else is required if it does not get invoked.
 </p>
 
 </section>
-<section id="slide-org5230409">
-<h3 id="org5230409">STL shortcomings</h3>
+<section id="slide-org03c3a97">
+<h3 id="org03c3a97">STL shortcomings</h3>
 <ul>
 <li><code>array</code></li>
 <li><code>string</code></li>
@@ -828,8 +828,8 @@ Nothing else is required if it does not get invoked.
 </ul>
 
 </section>
-<section id="slide-orgf7387a7">
-<h3 id="orgf7387a7">Limitations of our containers</h3>
+<section id="slide-org050f4bc">
+<h3 id="org050f4bc">Limitations of our containers</h3>
 <ul>
 <li>Fixed maximum size</li>
 <li>(Currently) cannot shrink</li>
@@ -838,8 +838,8 @@ Nothing else is required if it does not get invoked.
 </ul>
 
 </section>
-<section id="slide-org77e9771">
-<h3 id="org77e9771">How to improve our containers</h3>
+<section id="slide-org6c013e8">
+<h3 id="org6c013e8">How to improve our containers</h3>
 <ul>
 <li>We could wrap objects in <code>std::optional</code> to allow for objects that are not default constructible</li>
 <li>It should be possible to templatize on <code>constexpr</code> enabled allocator, making these containers optionally <code>constexpr</code></li>
@@ -849,8 +849,8 @@ Nothing else is required if it does not get invoked.
 </section>
 </section>
 <section>
-<section id="slide-org4e993a8">
-<h2 id="org4e993a8">Parsing JSON Value Literals</h2>
+<section id="slide-org930829f">
+<h2 id="org930829f">Parsing JSON Value Literals</h2>
 <p>
 Because we need some way to actually turn a string literal into our JSON
 representation.
@@ -864,8 +864,8 @@ Ben drives this section.
 </aside>
 
 </section>
-<section id="slide-org6a6825d">
-<h3 id="org6a6825d">What is a Parser?</h3>
+<section id="slide-org5608c39">
+<h3 id="org5608c39">What is a Parser?</h3>
 <p>
 <br />
 </p>
@@ -891,9 +891,17 @@ Or in our case something like:
 </pre>
 </div>
 
+<aside class="notes">
+<p>
+This serendipitous phrase is due to Fritz Ruehr, a functional programming
+lecturer at Willamette University.
+</p>
+
+</aside>
+
 </section>
-<section id="slide-org9f82e73">
-<h3 id="org9f82e73">Parsers</h3>
+<section id="slide-org23743c3">
+<h3 id="org23743c3">Parsers</h3>
 <div class="org-src-container">
 
 <pre  class="src src-c++"><span style="color: #a020f0;">template</span> <span style="color: #707183;">&lt;</span><span style="color: #a020f0;">typename</span> <span style="color: #228b22;">T</span><span style="color: #707183;">&gt;</span>
@@ -936,8 +944,8 @@ lambdas!
 </aside>
 
 </section>
-<section id="slide-org167d506">
-<h3 id="org167d506">A Simple Parser</h3>
+<section id="slide-org09b7636">
+<h3 id="org09b7636">A Simple Parser</h3>
 <p>
 Let's have a couple of aliases that will make life simpler.
 </p>
@@ -974,8 +982,8 @@ parsers.
 </aside>
 
 </section>
-<section id="slide-orgdc53c14">
-<h3 id="orgdc53c14">A Simple Parser</h3>
+<section id="slide-org546902b">
+<h3 id="org546902b">A Simple Parser</h3>
 <div class="org-src-container">
 
 <pre  class="src src-c++"><span style="color: #bebebe;">// </span><span style="color: #bebebe;">Ceci n'est pas une parser.</span>
@@ -1002,8 +1010,8 @@ parser.
 </p>
 
 </section>
-<section id="slide-org2a79504">
-<h3 id="org2a79504">A Simple Parser</h3>
+<section id="slide-org58930b9">
+<h3 id="org58930b9">A Simple Parser</h3>
 <div class="org-src-container">
 
 <pre  class="src src-c++"><span style="color: #a020f0;">constexpr</span> <span style="color: #a020f0;">auto</span> <span style="color: #0000ff;">make_char_parser</span><span style="color: #707183;">(</span><span style="color: #228b22;">char</span> <span style="color: #a0522d;">c</span><span style="color: #707183;">)</span>
@@ -1022,8 +1030,8 @@ given <code>char</code>.
 </p>
 
 </section>
-<section id="slide-orgb1cd610">
-<h3 id="orgb1cd610">More useful primitive parsers</h3>
+<section id="slide-org799b068">
+<h3 id="org799b068">More useful primitive parsers</h3>
 <p>
 So far we can match one <code>char</code>. Because fundamentally parsing works on
 "strings", there are a couple of other parsers that will be useful.
@@ -1049,8 +1057,8 @@ So far we can match one <code>char</code>. Because fundamentally parsing works o
 </div>
 
 </section>
-<section id="slide-org68dc36e">
-<h3 id="org68dc36e">More useful primitive parsers</h3>
+<section id="slide-org5532030">
+<h3 id="org5532030">More useful primitive parsers</h3>
 <p>
 And you can imagine how to write these.
 </p>
@@ -1078,8 +1086,8 @@ And you can imagine how to write these.
 </div>
 
 </section>
-<section id="slide-org79a7c39">
-<h3 id="org79a7c39">Building up</h3>
+<section id="slide-orgf27135c">
+<h3 id="orgf27135c">Building up</h3>
 <p>
 <br />
 So far we have a few primitive parsers.<br />
@@ -1090,8 +1098,8 @@ parsers in various ways.
 </p>
 
 </section>
-<section id="slide-org295b533">
-<h3 id="org295b533">Building up</h3>
+<section id="slide-org6e51abe">
+<h3 id="org6e51abe">Building up</h3>
 <p>
 Some basic things we will want to do:
 </p>
@@ -1101,7 +1109,6 @@ Some basic things we will want to do:
 <li>Run one parser, then a second one based on what the first returned (<code>bind</code>)</li>
 <li>Run one parser, and if it fails run another (<code>operator|</code>)</li>
 <li>Run two parsers in succession and combine the outputs (<code>combine</code>)</li>
-<li>Run a parser multiple times and aggregate the results (<code>many</code>, <code>many1</code>, <code>zero_or_one</code>)</li>
 
 </ul>
 
@@ -1122,13 +1129,278 @@ Some suggested names for the operations involved.
 <code>combine</code> is the applicative operation.
 </p>
 
+<p>
+I'll show you a few of these combinators so you can get a feel for them.
+</p>
+
 </aside>
+
+</section>
+<section id="slide-orge1a4767">
+<h3 id="orge1a4767">Changing the result type (<code>fmap</code>)</h3>
+<div class="org-src-container">
+
+<pre  class="src src-haskell"><span style="color: #0000ff;">fmap</span> <span style="color: #a0522d;">::</span> <span style="color: #707183;">(</span>a <span style="color: #a0522d;">-&gt;</span> b<span style="color: #707183;">)</span> <span style="color: #a0522d;">-&gt;</span> <span style="color: #228b22;">Parser</span> a <span style="color: #a0522d;">-&gt;</span> <span style="color: #228b22;">Parser</span> b
+</pre>
+</div>
+
+<div class="org-src-container">
+
+<pre  class="src src-c++"><span style="color: #bebebe;">// </span><span style="color: #bebebe;">fmap a function into a parser.</span>
+<span style="color: #a020f0;">template</span> <span style="color: #707183;">&lt;</span><span style="color: #a020f0;">typename</span> <span style="color: #228b22;">F</span>, <span style="color: #a020f0;">typename</span> <span style="color: #228b22;">P</span><span style="color: #707183;">&gt;</span>
+<span style="color: #a020f0;">constexpr</span> <span style="color: #a020f0;">auto</span> <span style="color: #0000ff;">fmap</span><span style="color: #707183;">(</span><span style="color: #228b22;">F</span>&amp;&amp; <span style="color: #a0522d;">f</span>, <span style="color: #228b22;">P</span>&amp;&amp; <span style="color: #a0522d;">p</span><span style="color: #707183;">)</span>
+<span style="color: #707183;">{</span>
+  <span style="color: #a020f0;">using</span> <span style="color: #228b22;">R</span> = <span style="color: #228b22;">parse_result_t</span><span style="color: #7388d6;">&lt;</span><span style="color: #008b8b;">std</span>::<span style="color: #228b22;">result_of_t</span><span style="color: #909183;">&lt;</span><span style="color: #0000ff;">F</span><span style="color: #709870;">(</span><span style="color: #228b22;">parse_t</span><span style="color: #907373;">&lt;</span><span style="color: #228b22;">P</span><span style="color: #907373;">&gt;</span><span style="color: #709870;">)</span><span style="color: #909183;">&gt;</span><span style="color: #7388d6;">&gt;</span>;
+  <span style="color: #a020f0;">return</span> <span style="color: #7388d6;">[</span>f = <span style="color: #008b8b;">std</span>::forward<span style="color: #909183;">&lt;</span><span style="color: #228b22;">F</span><span style="color: #909183;">&gt;(</span>f<span style="color: #909183;">)</span>,
+          p = <span style="color: #008b8b;">std</span>::forward<span style="color: #909183;">&lt;</span><span style="color: #228b22;">P</span><span style="color: #909183;">&gt;(</span>p<span style="color: #909183;">)</span><span style="color: #7388d6;">]</span> <span style="color: #7388d6;">(</span><span style="color: #228b22;">parse_input_t</span> <span style="color: #a0522d;">i</span><span style="color: #7388d6;">)</span> -&gt; R <span style="color: #7388d6;">{</span>
+           <span style="color: #a020f0;">const</span> <span style="color: #a020f0;">auto</span> r = p<span style="color: #909183;">(</span>i<span style="color: #909183;">)</span>;
+           <span style="color: #a020f0;">if</span> <span style="color: #909183;">(</span>!r<span style="color: #909183;">)</span> <span style="color: #a020f0;">return</span> <span style="color: #008b8b;">std</span>::nullopt;
+           <span style="color: #a020f0;">return</span> R<span style="color: #909183;">(</span><span style="color: #008b8b;">cx</span>::make_pair<span style="color: #709870;">(</span>f<span style="color: #907373;">(</span>r-&gt;first<span style="color: #907373;">)</span>, r-&gt;second<span style="color: #709870;">)</span><span style="color: #909183;">)</span>;
+         <span style="color: #7388d6;">}</span>;
+<span style="color: #707183;">}</span>
+</pre>
+</div>
+
+<aside class="notes">
+<p>
+<code>parse_t</code> here is just a way of getting the parsed type back out of the parser
+without all the optional/pair business.
+</p>
+
+<p>
+Note what fmap returns is a parser.
+</p>
+
+<p>
+Think about a simple case of turning a char into an int.
+</p>
+
+</aside>
+
+</section>
+<section id="slide-org7c63cfa">
+<h3 id="org7c63cfa">Alternation (<code>operator|</code>)</h3>
+<div class="org-src-container">
+
+<pre  class="src src-haskell">operator<span style="color: #0000ff;">|</span> <span style="color: #a0522d;">::</span> <span style="color: #228b22;">Parser</span> a <span style="color: #a0522d;">-&gt;</span> <span style="color: #228b22;">Parser</span> a <span style="color: #a0522d;">-&gt;</span> <span style="color: #228b22;">Parser</span> a
+</pre>
+</div>
+
+<div class="org-src-container">
+
+<pre  class="src src-c++"><span style="color: #a020f0;">template</span> <span style="color: #707183;">&lt;</span><span style="color: #a020f0;">typename</span> <span style="color: #228b22;">P1</span>, <span style="color: #a020f0;">typename</span> <span style="color: #228b22;">P2</span>,
+          <span style="color: #008b8b;">std</span>::<span style="color: #228b22;">enable_if_t</span><span style="color: #7388d6;">&lt;</span><span style="color: #008b8b;">std</span>::<span style="color: #228b22;">is_same_v</span><span style="color: #909183;">&lt;</span><span style="color: #228b22;">parse_t</span><span style="color: #709870;">&lt;</span><span style="color: #228b22;">P1</span><span style="color: #709870;">&gt;</span>, <span style="color: #228b22;">parse_t</span><span style="color: #709870;">&lt;</span><span style="color: #228b22;">P2</span><span style="color: #709870;">&gt;</span><span style="color: #909183;">&gt;</span>, <span style="color: #228b22;">int</span><span style="color: #7388d6;">&gt;</span> = <span style="color: #008b8b;">0</span><span style="color: #707183;">&gt;</span>
+<span style="color: #a020f0;">constexpr</span> <span style="color: #a020f0;">auto</span> <span style="color: #a020f0;">operator</span><span style="color: #0000ff;">|</span><span style="color: #707183;">(</span>P1&amp;&amp; p1, P2&amp;&amp; p2<span style="color: #707183;">)</span> <span style="color: #707183;">{</span>
+  <span style="color: #a020f0;">return</span> <span style="color: #7388d6;">[</span>=<span style="color: #7388d6;">]</span> <span style="color: #7388d6;">(</span><span style="color: #228b22;">parse_input_t</span> <span style="color: #a0522d;">i</span><span style="color: #7388d6;">)</span> <span style="color: #7388d6;">{</span>
+    <span style="color: #a020f0;">const</span> <span style="color: #a020f0;">auto</span> r1 = p1<span style="color: #909183;">(</span>i<span style="color: #909183;">)</span>;
+    <span style="color: #a020f0;">if</span> <span style="color: #909183;">(</span>r1<span style="color: #909183;">)</span> <span style="color: #a020f0;">return</span> r1;
+    <span style="color: #a020f0;">return</span> p2<span style="color: #909183;">(</span>i<span style="color: #909183;">)</span>;
+  <span style="color: #7388d6;">}</span>;
+<span style="color: #707183;">}</span>
+</pre>
+</div>
+
+</section>
+<section id="slide-org00c4eb9">
+<h3 id="org00c4eb9">Conjunction (<code>combine</code>)</h3>
+<div class="org-src-container">
+
+<pre  class="src src-haskell"><span style="color: #0000ff;">combine</span> <span style="color: #a0522d;">::</span> <span style="color: #228b22;">Parser</span> a <span style="color: #a0522d;">-&gt;</span> <span style="color: #228b22;">Parser</span> b <span style="color: #a0522d;">-&gt;</span> <span style="color: #707183;">(</span>a <span style="color: #a0522d;">-&gt;</span> b <span style="color: #a0522d;">-&gt;</span> c<span style="color: #707183;">)</span> <span style="color: #a0522d;">-&gt;</span> <span style="color: #228b22;">Parser</span> c
+</pre>
+</div>
+
+<div class="org-src-container">
+
+<pre  class="src src-c++"><span style="color: #a020f0;">template</span> <span style="color: #707183;">&lt;</span><span style="color: #a020f0;">typename</span> <span style="color: #228b22;">P1</span>, <span style="color: #a020f0;">typename</span> <span style="color: #228b22;">P2</span>, <span style="color: #a020f0;">typename</span> <span style="color: #228b22;">F</span>,
+          <span style="color: #a020f0;">typename</span> <span style="color: #228b22;">R</span> = <span style="color: #008b8b;">std</span>::<span style="color: #228b22;">result_of_t</span><span style="color: #7388d6;">&lt;</span>F<span style="color: #909183;">(</span><span style="color: #228b22;">parse_t</span><span style="color: #709870;">&lt;</span><span style="color: #228b22;">P1</span><span style="color: #709870;">&gt;</span>, <span style="color: #228b22;">parse_t</span><span style="color: #709870;">&lt;</span><span style="color: #228b22;">P2</span><span style="color: #709870;">&gt;</span><span style="color: #909183;">)</span><span style="color: #7388d6;">&gt;</span><span style="color: #707183;">&gt;</span>
+<span style="color: #a020f0;">constexpr</span> <span style="color: #a020f0;">auto</span> <span style="color: #0000ff;">combine</span><span style="color: #707183;">(</span><span style="color: #228b22;">P1</span>&amp;&amp; <span style="color: #a0522d;">p1</span>, <span style="color: #228b22;">P2</span>&amp;&amp; <span style="color: #a0522d;">p2</span>, <span style="color: #228b22;">F</span>&amp;&amp; <span style="color: #a0522d;">f</span><span style="color: #707183;">)</span> <span style="color: #707183;">{</span>
+  <span style="color: #a020f0;">return</span> <span style="color: #7388d6;">[</span>=<span style="color: #7388d6;">]</span> <span style="color: #7388d6;">(</span><span style="color: #228b22;">parse_input_t</span> <span style="color: #a0522d;">i</span><span style="color: #7388d6;">)</span> -&gt; <span style="color: #228b22;">parse_result_t</span><span style="color: #7388d6;">&lt;</span><span style="color: #228b22;">R</span><span style="color: #7388d6;">&gt;</span> <span style="color: #7388d6;">{</span>
+           <span style="color: #a020f0;">const</span> <span style="color: #a020f0;">auto</span> r1 = p1<span style="color: #909183;">(</span>i<span style="color: #909183;">)</span>;
+           <span style="color: #a020f0;">if</span> <span style="color: #909183;">(</span>!r1<span style="color: #909183;">)</span> <span style="color: #a020f0;">return</span> <span style="color: #008b8b;">std</span>::nullopt;
+           <span style="color: #a020f0;">const</span> <span style="color: #a020f0;">auto</span> r2 = p2<span style="color: #909183;">(</span>r1-&gt;second<span style="color: #909183;">)</span>;
+           <span style="color: #a020f0;">if</span> <span style="color: #909183;">(</span>!r2<span style="color: #909183;">)</span> <span style="color: #a020f0;">return</span> <span style="color: #008b8b;">std</span>::nullopt;
+           <span style="color: #a020f0;">return</span> parse_result_t<span style="color: #909183;">&lt;</span><span style="color: #228b22;">R</span><span style="color: #909183;">&gt;(</span>
+               <span style="color: #008b8b;">cx</span>::make_pair<span style="color: #709870;">(</span>f<span style="color: #907373;">(</span>r1-&gt;first, r2-&gt;first<span style="color: #907373;">)</span>, r2-&gt;second<span style="color: #709870;">)</span><span style="color: #909183;">)</span>;
+         <span style="color: #7388d6;">}</span>;
+<span style="color: #707183;">}</span>
+</pre>
+</div>
+
+</section>
+<section id="slide-orge06dd76">
+<h3 id="orge06dd76">Useful <code>combine</code> patterns</h3>
+<div class="org-src-container">
+
+<pre  class="src src-haskell">operator<span style="color: #0000ff;">&gt;</span> <span style="color: #a0522d;">::</span> <span style="color: #228b22;">Parser</span> a <span style="color: #a0522d;">-&gt;</span> <span style="color: #228b22;">Parser</span> b <span style="color: #a0522d;">-&gt;</span> <span style="color: #228b22;">Parser</span> a
+operator<span style="color: #0000ff;">&lt;</span> <span style="color: #a0522d;">::</span> <span style="color: #228b22;">Parser</span> a <span style="color: #a0522d;">-&gt;</span> <span style="color: #228b22;">Parser</span> b <span style="color: #a0522d;">-&gt;</span> <span style="color: #228b22;">Parser</span> b
+</pre>
+</div>
+
+<div class="org-src-container">
+
+<pre  class="src src-c++"><span style="color: #a020f0;">template</span> <span style="color: #707183;">&lt;</span><span style="color: #a020f0;">typename</span> <span style="color: #228b22;">P1</span>, <span style="color: #a020f0;">typename</span> <span style="color: #228b22;">P2</span>,
+          <span style="color: #a020f0;">typename</span> = <span style="color: #228b22;">parse_t</span><span style="color: #7388d6;">&lt;</span><span style="color: #228b22;">P1</span><span style="color: #7388d6;">&gt;</span>, <span style="color: #a020f0;">typename</span> = <span style="color: #228b22;">parse_t</span><span style="color: #7388d6;">&lt;</span><span style="color: #228b22;">P2</span><span style="color: #7388d6;">&gt;</span><span style="color: #707183;">&gt;</span>
+<span style="color: #a020f0;">constexpr</span> <span style="color: #a020f0;">auto</span> <span style="color: #a020f0;">operator</span><span style="color: #0000ff;">&lt;</span><span style="color: #707183;">(</span>P1&amp;&amp; p1, P2&amp;&amp; p2<span style="color: #707183;">)</span> <span style="color: #707183;">{</span>
+  <span style="color: #a020f0;">return</span> combine<span style="color: #7388d6;">(</span><span style="color: #008b8b;">std</span>::forward<span style="color: #909183;">&lt;</span><span style="color: #228b22;">P1</span><span style="color: #909183;">&gt;(</span>p1<span style="color: #909183;">)</span>,
+                 <span style="color: #008b8b;">std</span>::forward<span style="color: #909183;">&lt;</span><span style="color: #228b22;">P2</span><span style="color: #909183;">&gt;(</span>p2<span style="color: #909183;">)</span>,
+                 <span style="color: #909183;">[]</span> <span style="color: #909183;">(</span><span style="color: #a020f0;">auto</span>, <span style="color: #a020f0;">const</span> <span style="color: #a020f0;">auto</span>&amp; <span style="color: #a0522d;">r</span><span style="color: #909183;">)</span> <span style="color: #909183;">{</span> <span style="color: #a020f0;">return</span> r; <span style="color: #909183;">}</span><span style="color: #7388d6;">)</span>;
+<span style="color: #707183;">}</span>
+</pre>
+</div>
+
+<p>
+These operators are useful for throwing away the left or right hand side of <code>combine</code>.
+</p>
+
+</section>
+<section id="slide-org0245e3d">
+<h3 id="org0245e3d">Accumulating combinators</h3>
+<p>
+And now you begin to see where this is heading&#x2026;
+</p>
+
+<div class="org-src-container">
+
+<pre  class="src src-haskell"><span style="color: #0000ff;">many</span> <span style="color: #a0522d;">::</span> <span style="color: #228b22;">Parser</span> a <span style="color: #a0522d;">-&gt;</span> b <span style="color: #a0522d;">-&gt;</span> <span style="color: #707183;">(</span>b <span style="color: #a0522d;">-&gt;</span> a <span style="color: #a0522d;">-&gt;</span> b<span style="color: #707183;">)</span>  <span style="color: #a0522d;">-&gt;</span> <span style="color: #228b22;">Parser</span> b
+<span style="color: #0000ff;">many1</span> <span style="color: #a0522d;">::</span> <span style="color: #228b22;">Parser</span> a <span style="color: #a0522d;">-&gt;</span> b <span style="color: #a0522d;">-&gt;</span> <span style="color: #707183;">(</span>b <span style="color: #a0522d;">-&gt;</span> a <span style="color: #a0522d;">-&gt;</span> b<span style="color: #707183;">)</span>  <span style="color: #a0522d;">-&gt;</span> <span style="color: #228b22;">Parser</span> b
+<span style="color: #0000ff;">exactly_n</span> <span style="color: #a0522d;">::</span> <span style="color: #228b22;">Parser</span> a <span style="color: #a0522d;">-&gt;</span> int <span style="color: #a0522d;">-&gt;</span> b <span style="color: #a0522d;">-&gt;</span> <span style="color: #707183;">(</span>b <span style="color: #a0522d;">-&gt;</span> a <span style="color: #a0522d;">-&gt;</span> b<span style="color: #707183;">)</span> <span style="color: #a0522d;">-&gt;</span> <span style="color: #228b22;">Parser</span> b
+<span style="color: #0000ff;">separated_by</span> <span style="color: #a0522d;">::</span> <span style="color: #228b22;">Parser</span> a <span style="color: #a0522d;">-&gt;</span> <span style="color: #228b22;">Parser</span> x <span style="color: #a0522d;">-&gt;</span> b <span style="color: #a0522d;">-&gt;</span> <span style="color: #707183;">(</span>b <span style="color: #a0522d;">-&gt;</span> a <span style="color: #a0522d;">-&gt;</span> b<span style="color: #707183;">)</span> <span style="color: #a0522d;">-&gt;</span> <span style="color: #228b22;">Parser</span> b
+</pre>
+</div>
+
+<p>
+These are starting to look like building blocks we can use to parse real things.
+</p>
+
+<aside class="notes">
+<p>
+Explain each of these function signatures.
+</p>
+
+</aside>
+
+</section>
+<section id="slide-org0e34e3f">
+<h3 id="org0e34e3f">Some simple examples</h3>
+<p>
+This parser eats whitespace.
+</p>
+
+<div class="org-src-container">
+
+<pre  class="src src-c++"><span style="color: #a020f0;">constexpr</span> <span style="color: #a020f0;">auto</span> <span style="color: #0000ff;">skip_whitespace</span><span style="color: #707183;">()</span>
+<span style="color: #707183;">{</span>
+  <span style="color: #a020f0;">constexpr</span> <span style="color: #a020f0;">auto</span> ws_parser =
+    make_char_parser<span style="color: #7388d6;">(</span><span style="color: #b22222;">' '</span><span style="color: #7388d6;">)</span>
+    | make_char_parser<span style="color: #7388d6;">(</span><span style="color: #b22222;">'</span><span style="color: #b22222; font-weight: bold;">\</span><span style="color: #b22222; font-weight: bold;">t</span><span style="color: #b22222;">'</span><span style="color: #7388d6;">)</span>
+    | make_char_parser<span style="color: #7388d6;">(</span><span style="color: #b22222;">'</span><span style="color: #b22222; font-weight: bold;">\</span><span style="color: #b22222; font-weight: bold;">n</span><span style="color: #b22222;">'</span><span style="color: #7388d6;">)</span>
+    | make_char_parser<span style="color: #7388d6;">(</span><span style="color: #b22222;">'</span><span style="color: #b22222; font-weight: bold;">\</span><span style="color: #b22222; font-weight: bold;">r</span><span style="color: #b22222;">'</span><span style="color: #7388d6;">)</span>;
+  <span style="color: #a020f0;">return</span> many<span style="color: #7388d6;">(</span>ws_parser, <span style="color: #008b8b;">std</span>::monostate<span style="color: #909183;">{}</span>, <span style="color: #909183;">[]</span> <span style="color: #909183;">(</span><span style="color: #a020f0;">auto</span> <span style="color: #a0522d;">m</span>, <span style="color: #a020f0;">auto</span><span style="color: #909183;">)</span> <span style="color: #909183;">{</span> <span style="color: #a020f0;">return</span> m; <span style="color: #909183;">}</span><span style="color: #7388d6;">)</span>;
+<span style="color: #707183;">}</span>
+</pre>
+</div>
+
+</section>
+<section id="slide-org5857877">
+<h3 id="org5857877">Some simple examples</h3>
+<p>
+This parses a decimal integer.
+</p>
+<div class="org-src-container">
+
+<pre  class="src src-c++"><span style="color: #a020f0;">constexpr</span> <span style="color: #a020f0;">auto</span> <span style="color: #0000ff;">int_parser</span><span style="color: #707183;">()</span>
+<span style="color: #707183;">{</span>
+  <span style="color: #a020f0;">return</span> bind<span style="color: #7388d6;">(</span>one_of<span style="color: #909183;">(</span><span style="color: #b22222;">"</span><span style="color: #b22222;">123</span><span style="color: #b22222; background-color: #eeeeee; font-weight: bold; text-decoration: underline;">456</span><span style="color: #b22222;">789</span><span style="color: #b22222;">"</span>sv<span style="color: #909183;">)</span>,
+              <span style="color: #909183;">[]</span> <span style="color: #909183;">(</span><span style="color: #228b22;">char</span> <span style="color: #a0522d;">x</span>, <span style="color: #228b22;">parse_input_t</span> <span style="color: #a0522d;">rest</span><span style="color: #909183;">)</span> <span style="color: #909183;">{</span>
+                <span style="color: #a020f0;">return</span> many<span style="color: #709870;">(</span>one_of<span style="color: #907373;">(</span><span style="color: #b22222;">"</span><span style="color: #b22222; background-color: #eeeeee; font-weight: bold; text-decoration: underline;">0</span><span style="color: #b22222;">123</span><span style="color: #b22222; background-color: #eeeeee; font-weight: bold; text-decoration: underline;">456</span><span style="color: #b22222;">789</span><span style="color: #b22222;">"</span>sv<span style="color: #907373;">)</span>,
+                            <span style="color: #a020f0;">static_cast</span><span style="color: #907373;">&lt;</span><span style="color: #228b22;">int</span><span style="color: #907373;">&gt;(</span>x - <span style="color: #b22222;">'0'</span><span style="color: #907373;">)</span>,
+                            <span style="color: #907373;">[]</span> <span style="color: #907373;">(</span><span style="color: #228b22;">int</span> <span style="color: #a0522d;">acc</span>, <span style="color: #228b22;">char</span> <span style="color: #a0522d;">c</span><span style="color: #907373;">)</span> <span style="color: #907373;">{</span> <span style="color: #a020f0;">return</span> <span style="color: #6276ba;">(</span><span style="color: #228b22;">acc</span>*<span style="color: #008b8b;">10</span><span style="color: #6276ba;">)</span> + <span style="color: #6276ba;">(</span>c-<span style="color: #b22222;">'0'</span><span style="color: #6276ba;">)</span>; <span style="color: #907373;">}</span><span style="color: #709870;">)(</span>rest<span style="color: #709870;">)</span>;
+              <span style="color: #909183;">}</span><span style="color: #7388d6;">)</span>;
+<span style="color: #707183;">}</span>
+</pre>
+</div>
+<p>
+First any non-zero digit, then zero or more digits,<br />
+building up the integer in the obvious way.
+</p>
+
+</section>
+<section id="slide-org08b8611">
+<h3 id="org08b8611">Some simple examples</h3>
+<p>
+This (very simply) parses a string.
+</p>
+<div class="org-src-container">
+
+<pre  class="src src-c++"><span style="color: #a020f0;">constexpr</span> <span style="color: #a020f0;">auto</span> <span style="color: #0000ff;">string_parser</span><span style="color: #707183;">()</span>
+<span style="color: #707183;">{</span>
+  <span style="color: #a020f0;">constexpr</span> <span style="color: #a020f0;">auto</span> quote_parser = make_char_parser<span style="color: #7388d6;">(</span><span style="color: #b22222;">'"'</span><span style="color: #7388d6;">)</span>;
+  <span style="color: #a020f0;">const</span> <span style="color: #a020f0;">auto</span> str_parser =
+    many<span style="color: #7388d6;">(</span>none_of<span style="color: #909183;">(</span><span style="color: #b22222;">"</span><span style="color: #b22222; font-weight: bold;">\</span><span style="color: #b22222; font-weight: bold;">"</span><span style="color: #b22222;">"</span>sv<span style="color: #909183;">)</span>,
+         <span style="color: #008b8b;">cx</span>::string<span style="color: #909183;">{}</span>,
+         <span style="color: #909183;">[]</span> <span style="color: #909183;">(</span><span style="color: #a020f0;">auto</span> <span style="color: #a0522d;">acc</span>, <span style="color: #228b22;">char</span> <span style="color: #a0522d;">c</span><span style="color: #909183;">)</span> <span style="color: #909183;">{</span>
+           acc.push_back<span style="color: #709870;">(</span>c<span style="color: #709870;">)</span>;
+           <span style="color: #a020f0;">return</span> acc;
+         <span style="color: #909183;">}</span><span style="color: #7388d6;">)</span>;
+  <span style="color: #a020f0;">return</span> <span style="color: #228b22;">quote_parser</span> <span style="color: #7388d6;">&lt;</span> str_parser <span style="color: #7388d6;">&gt;</span> quote_parser;
+<span style="color: #707183;">}</span>
+</pre>
+</div>
+
+<aside class="notes">
+<p>
+For the sake of simplicity, we aren't dealing with escaped characters, unicode
+points, etc.
+</p>
+
+<p>
+In fact for this simple example we could be accumulating a <code>string_view</code>. But in
+general when we come to parse escaped characters, the input characters don't
+have a 1-to-1 mapping with the output characters.
+</p>
+
+</aside>
+
+</section>
+<section id="slide-org850fc66">
+<h3 id="org850fc66">Getting to JSON</h3>
+<p>
+We now have a reasonable toolkit for building parsers.
+</p>
+<div class="org-src-container">
+
+<pre  class="src src-c++"><span style="color: #a020f0;">template</span> <span style="color: #707183;">&lt;</span><span style="color: #228b22;">size_t</span> <span style="color: #a0522d;">Depth</span>=<span style="color: #008b8b;">5</span><span style="color: #707183;">&gt;</span>
+<span style="color: #a020f0;">struct</span> <span style="color: #228b22;">JSON_Value</span>
+<span style="color: #707183;">{</span>
+  ...
+  <span style="color: #a020f0;">struct</span> <span style="color: #228b22;">Data</span>
+  <span style="color: #7388d6;">{</span>
+    <span style="color: #228b22;">bool</span> <span style="color: #a0522d;">boolean</span><span style="color: #909183;">{</span><span style="color: #008b8b;">false</span><span style="color: #909183;">}</span>;
+    <span style="color: #228b22;">double</span> <span style="color: #a0522d;">number</span><span style="color: #909183;">{</span><span style="color: #008b8b;">0</span><span style="color: #909183;">}</span>;
+    <span style="color: #008b8b;">cx</span>::<span style="color: #228b22;">static_string</span> <span style="color: #a0522d;">string</span>;
+    <span style="color: #008b8b;">cx</span>::<span style="color: #228b22;">vector</span><span style="color: #909183;">&lt;</span><span style="color: #228b22;">JSON_Value</span><span style="color: #709870;">&lt;</span>Depth-<span style="color: #008b8b;">1</span><span style="color: #709870;">&gt;</span>, max_vector_size<span style="color: #909183;">&gt;</span> <span style="color: #a0522d;">array</span>;
+    <span style="color: #008b8b;">cx</span>::<span style="color: #228b22;">map</span><span style="color: #909183;">&lt;</span><span style="color: #008b8b;">cx</span>::<span style="color: #228b22;">static_string</span>, <span style="color: #228b22;">JSON_Value</span><span style="color: #709870;">&lt;</span>Depth-<span style="color: #008b8b;">1</span><span style="color: #709870;">&gt;</span>, max_map_size<span style="color: #909183;">&gt;</span> <span style="color: #a0522d;">object</span>;
+  <span style="color: #7388d6;">}</span>;
+  ...
+<span style="color: #707183;">}</span>;
+</pre>
+</div>
+<p>
+To parse our JSON value, a reasonable approach is to use alternation on parsers
+for each type of value.
+</p>
+
+</section>
+<section id="slide-org40838ab">
+<h3 id="org40838ab">Parsing our <code>JSON_Value</code></h3>
+
+
 
 </section>
 </section>
 <section>
-<section id="slide-org10f8e36">
-<h2 id="org10f8e36">The Future</h2>
+<section id="slide-orgaa21922">
+<h2 id="orgaa21922">The Future</h2>
 <aside class="notes">
 <p>
 Jason to talk through this section.
@@ -1137,8 +1409,8 @@ Jason to talk through this section.
 </aside>
 
 </section>
-<section id="slide-orgbe2b5d4">
-<h3 id="orgbe2b5d4">The destructor problem</h3>
+<section id="slide-org8d04456">
+<h3 id="org8d04456">The destructor problem</h3>
 <p>
 Currently any type with a non-trivial destructor cannot be used in <code>constexpr</code> context.
 </p>
@@ -1148,8 +1420,8 @@ trivially destructible quiz time!
 </p>
 
 </section>
-<section id="slide-orgfb45dcf">
-<h3 id="orgfb45dcf"><code>is_trivially_destructible</code></h3>
+<section id="slide-orgb036e18">
+<h3 id="orgb036e18"><code>is_trivially_destructible</code></h3>
 <p>
 Does this <code>static_assert</code> succeed?
 </p>
@@ -1164,8 +1436,8 @@ static_assert<span style="color: #707183;">(</span><span style="color: #008b8b;"
 </div>
 
 </section>
-<section id="slide-org4288280">
-<h3 id="org4288280"><code>is_trivially_destructible</code></h3>
+<section id="slide-org73ad635">
+<h3 id="org73ad635"><code>is_trivially_destructible</code></h3>
 <p>
 Does this <code>static_assert</code> succeed?
 </p>
@@ -1181,8 +1453,8 @@ static_assert<span style="color: #707183;">(</span><span style="color: #008b8b;"
 </div>
 
 </section>
-<section id="slide-orgfc743de">
-<h3 id="orgfc743de"><code>is_trivially_destructible</code></h3>
+<section id="slide-org3b2dfde">
+<h3 id="org3b2dfde"><code>is_trivially_destructible</code></h3>
 <p>
 Does this <code>static_assert</code> succeed?
 </p>
@@ -1198,8 +1470,8 @@ static_assert<span style="color: #707183;">(</span><span style="color: #008b8b;"
 </div>
 
 </section>
-<section id="slide-org27cc8cd">
-<h3 id="org27cc8cd"><code>is_trivially_destructible</code></h3>
+<section id="slide-org0329960">
+<h3 id="org0329960"><code>is_trivially_destructible</code></h3>
 <p>
 Does this <code>static_assert</code> succeed?
 </p>
@@ -1215,8 +1487,8 @@ static_assert<span style="color: #707183;">(</span><span style="color: #008b8b;"
 </div>
 
 </section>
-<section id="slide-org3ab9dc5">
-<h3 id="org3ab9dc5">Why is this a problem?</h3>
+<section id="slide-org0d7676c">
+<h3 id="org0d7676c">Why is this a problem?</h3>
 <p>
 It's easy to build a <code>constexpr</code> enabled type that can grow at runtime or fail to
 compile if it gets too big in <code>constexpr</code> context.
@@ -1243,8 +1515,8 @@ compile if it gets too big in <code>constexpr</code> context.
 </div>
 
 </section>
-<section id="slide-orga8e74b7">
-<h3 id="orga8e74b7">Why is this a problem?</h3>
+<section id="slide-orga50078e">
+<h3 id="orga50078e">Why is this a problem?</h3>
 <p>
 But as soon as we add a destructor, the class is no longer usable in a <code>constexpr</code> context.
 </p>
@@ -1254,8 +1526,8 @@ So we can build this type, but we are required to leak memory if it grows beyond
 </p>
 
 </section>
-<section id="slide-orga1245d8">
-<h3 id="orga1245d8">Solutions to the <code>constexpr</code> destructor problem</h3>
+<section id="slide-org9bf98c6">
+<h3 id="org9bf98c6">Solutions to the <code>constexpr</code> destructor problem</h3>
 <div class="org-src-container">
 
 <pre  class="src src-c++"><span style="color: #a020f0;">struct</span> <span style="color: #228b22;">Container</span> <span style="color: #707183;">{</span>
@@ -1270,8 +1542,8 @@ So we can build this type, but we are required to leak memory if it grows beyond
 </div>
 
 </section>
-<section id="slide-org03e084f">
-<h3 id="org03e084f">Solutions to the <code>constexpr</code> destructor problem</h3>
+<section id="slide-org19f2c03">
+<h3 id="org19f2c03">Solutions to the <code>constexpr</code> destructor problem</h3>
 <div class="org-src-container">
 
 <pre  class="src src-c++"><span style="color: #a020f0;">struct</span> <span style="color: #228b22;">Container</span> <span style="color: #707183;">{</span>
@@ -1288,8 +1560,8 @@ So we can build this type, but we are required to leak memory if it grows beyond
 </div>
 
 </section>
-<section id="slide-orgb482f2b">
-<h3 id="orgb482f2b">The debugging problem</h3>
+<section id="slide-orgc3d86b7">
+<h3 id="orgc3d86b7">The debugging problem</h3>
 <p>
 On which line does GCC report an error?
 </p>
@@ -1310,16 +1582,16 @@ On which line does GCC report an error?
 </div>
 
 </section>
-<section id="slide-org3e949d7">
-<h3 id="org3e949d7">The debugging problem</h3>
+<section id="slide-orga584973">
+<h3 id="orga584973">The debugging problem</h3>
 <p>
 Several times during debugging we had to take the code from compile time context 
 to runtime context to allow for actual debugging.
 </p>
 
 </section>
-<section id="slide-orgcff2e00">
-<h3 id="orgcff2e00">The debugging problem</h3>
+<section id="slide-org4dc748d">
+<h3 id="org4dc748d">The debugging problem</h3>
 <p>
 This proposal adds debugging capability at compile time.
 </p>
@@ -1331,8 +1603,8 @@ This proposal adds debugging capability at compile time.
 </div>
 
 </section>
-<section id="slide-org85622fb">
-<h3 id="org85622fb"><code>constexpr_vector</code></h3>
+<section id="slide-orgf79717d">
+<h3 id="orgf79717d"><code>constexpr_vector</code></h3>
 <p>
 This other proposal from the same author allows for a special type of <code>constexpr_vector</code>
 that is allowed to grow and shrink at compile time only, requiring compiler support.
@@ -1347,12 +1619,12 @@ that is allowed to grow and shrink at compile time only, requiring compiler supp
 </section>
 </section>
 <section>
-<section id="slide-org65175da">
-<h2 id="org65175da"><code>constexpr</code> STL possibilities</h2>
-<div class="outline-text-2" id="text-org65175da">
+<section id="slide-orgf9cb784">
+<h2 id="orgf9cb784"><code>constexpr</code> STL possibilities</h2>
+<div class="outline-text-2" id="text-orgf9cb784">
 </div></section>
-<section id="slide-org08f0a23">
-<h3 id="org08f0a23">algorithms</h3>
+<section id="slide-orgb11ccb1">
+<h3 id="orgb11ccb1">algorithms</h3>
 <p>
 Weakened complexity guarantees on <code>stable_sort</code>, <code>inplace_merge</code>, <code>stable_partition</code>?
 (They make use of temporary buffers to improve complexity.)
@@ -1363,8 +1635,8 @@ Are there others that might need to have weakened complexity guarantees for comp
 </p>
 
 </section>
-<section id="slide-orge42e4b3">
-<h3 id="orge42e4b3">iterators</h3>
+<section id="slide-org2b03093">
+<h3 id="org2b03093">iterators</h3>
 <p>
 If you have a <code>constexpr</code> container, you want the iterators to all be <code>constexpr</code>.
 </p>
@@ -1382,12 +1654,12 @@ e.g. if you have <code>constexpr push_back</code> on your <code>constexpr vector
 </section>
 </section>
 <section>
-<section id="slide-org22dcec6">
-<h2 id="org22dcec6">The Cost</h2>
-<div class="outline-text-2" id="text-org22dcec6">
+<section id="slide-org267b7ae">
+<h2 id="org267b7ae">The Cost</h2>
+<div class="outline-text-2" id="text-org267b7ae">
 </div></section>
-<section id="slide-org177bdc0">
-<h3 id="org177bdc0">Cognitive Cost</h3>
+<section id="slide-org3ee2ce4">
+<h3 id="org3ee2ce4">Cognitive Cost</h3>
 <ul>
 <li class="fragment appear">Flat data structures are easy to reason about</li>
 <li class="fragment appear"><code>constexpr</code> code forces you to consider what your code is doing and the lifetime of objects (in a good way).</li>
@@ -1397,8 +1669,8 @@ e.g. if you have <code>constexpr push_back</code> on your <code>constexpr vector
 </ul>
 
 </section>
-<section id="slide-orgfd75a5d">
-<h3 id="orgfd75a5d">Compile-time Cost - Debug Build</h3>
+<section id="slide-org394fffe">
+<h3 id="org394fffe">Compile-time Cost - Debug Build</h3>
 <ul>
 <li class="fragment appear">6GB RAM!</li>
 <li class="fragment appear">&gt;2 Minutes Build Time</li>
@@ -1408,8 +1680,8 @@ e.g. if you have <code>constexpr push_back</code> on your <code>constexpr vector
 </ul>
 
 </section>
-<section id="slide-org57efca8">
-<h3 id="org57efca8">Compile-time Cost - Release Build</h3>
+<section id="slide-org18c0159">
+<h3 id="org18c0159">Compile-time Cost - Release Build</h3>
 <ul>
 <li class="fragment appear">328MB RAM!</li>
 <li class="fragment appear">5s Build Time</li>
@@ -1420,8 +1692,8 @@ e.g. if you have <code>constexpr push_back</code> on your <code>constexpr vector
 </section>
 </section>
 <section>
-<section id="slide-orge43f999">
-<h2 id="orge43f999">End</h2>
+<section id="slide-org23571ef">
+<h2 id="org23571ef">End</h2>
 </section>
 </section>
 </div>
