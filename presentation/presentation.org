@@ -748,8 +748,7 @@ constexpr auto none_of(std::string_view chars)
 constexpr auto make_string_parser(std::string_view str)
 {
   return [=] (parse_input_t s) -> parse_result_t<std::string_view> {
-    // here we could use a constexpr version of
-    // std::mismatch...
+    // here we could use a constexpr version of std::mismatch...
     ...
   };
 }
@@ -760,8 +759,8 @@ constexpr auto make_string_parser(std::string_view str)
 So far we have a few primitive parsers.\\
 \\
 \\
-In order to simply build up more complex parsers, we need to be able to combine
-parsers in various ways.
+In order to simply build up more complex parsers, we need to be able to\\
+*combine* parsers in various ways.
 
 ** Building up
 Some basic things we will want to do:
@@ -771,10 +770,12 @@ Some basic things we will want to do:
  - Run one parser, and if it fails run another (~operator|~)
  - Run two parsers in succession and combine the outputs (~combine~)
 
-(Pick your functional pattern.)
+(Pick your functional pattern: functor, monad, monoid, applicative...)
 
 #+BEGIN_NOTES
 Some suggested names for the operations involved.
+
+"Change the result type" = run a function on the result to turn it into something else.
 
 ~operator|~ is the monoid operation (with the parser that always fails as the unit).
 
@@ -789,7 +790,6 @@ fmap :: (a -> b) -> Parser a -> Parser b
 #+END_SRC
 
 #+BEGIN_SRC c++
-// fmap a function into a parser.
 template <typename F, typename P>
 constexpr auto fmap(F&& f, P&& p)
 {
@@ -829,6 +829,19 @@ operator| :: Parser a -> Parser a -> Parser a
   }
 #+END_SRC
 
+#+BEGIN_SRC c++
+  template <typename T>
+  constexpr auto fail(T) {
+    return [=] (parse_input_t) -> parse_result_t<T> {
+      return std::nullopt;
+    };
+  }
+#+END_SRC
+
+#+BEGIN_NOTES
+Alternation is the monoid operation. ~fail~ is the identity.
+#+END_NOTES
+
 ** Conjunction (~combine~)
 #+BEGIN_SRC haskell
 combine :: Parser a -> Parser b -> (a -> b -> c) -> Parser c
@@ -849,6 +862,14 @@ combine :: Parser a -> Parser b -> (a -> b -> c) -> Parser c
   }
 #+END_SRC
 
+#+BEGIN_NOTES
+~combine~ is a bit like ~fmap~ for multiple-argument functions. In some sense
+the applicative operation.
+
+Note that both parsers need to succeed, and we run the second parser on what is
+leftover from the first, then return what is leftover from the second.
+#+END_NOTES
+
 ** Useful ~combine~ patterns
 #+BEGIN_SRC haskell
 operator> :: Parser a -> Parser b -> Parser a
@@ -866,6 +887,14 @@ operator< :: Parser a -> Parser b -> Parser b
 #+END_SRC
 
 These operators are useful for throwing away the left or right hand side of ~combine~.
+
+#+BEGIN_NOTES
+These simple formulations of combine are very useful. They allow us to run
+multiple parsers in succession, keeping just the left hand side or the right
+hand side.
+
+And of course the operators are symmetric and left-associative.
+#+END_NOTES
 
 ** Accumulating combinators
 And now you begin to see where this is heading...
@@ -898,6 +927,15 @@ This parser eats whitespace.
   }
 #+END_SRC
 
+#+BEGIN_NOTES
+Alternation of each individual parser.
+
+Then many (zero or more) of the resulting parser.
+
+The key to all the combinators is that what they return are themselves parsers.
+Composition!
+#+END_NOTES
+
 ** Some simple examples
 This parses a decimal integer.
 #+BEGIN_SRC c++
@@ -914,6 +952,11 @@ This parses a decimal integer.
 First any non-zero digit, then zero or more digits,\\
 building up the integer in the obvious way.
 
+#+BEGIN_NOTES
+Note that ~bind~'s second argument carries the leftover string through as well
+as the parse result of the first argument.
+#+END_NOTES
+
 ** Some simple examples
 This (very simply) parses a string.
 #+BEGIN_SRC c++
@@ -922,10 +965,9 @@ This (very simply) parses a string.
     constexpr auto quote_parser = make_char_parser('"');
     const auto str_parser =
       many(none_of("\""sv),
-           cx::string{},
-           [] (auto acc, char c) {
-             acc.push_back(c);
-             return acc;
+           std::string_view(s.data()+1, 0),
+           [] (const auto& acc, auto) {
+             return std::string_view(acc.data(), acc.size()+1);
            });
     return quote_parser < str_parser > quote_parser;
   }
@@ -935,13 +977,13 @@ This (very simply) parses a string.
 For the sake of simplicity, we aren't dealing with escaped characters, unicode
 points, etc.
 
-In fact for this simple example we could be accumulating a ~string_view~. But in
+In fact for this simple example we are accumulating a ~string_view~. But in
 general when we come to parse escaped characters, the input characters don't
 have a 1-to-1 mapping with the output characters.
 #+END_NOTES
 
 ** Getting to JSON
-We now have a reasonable toolkit for building parsers.
+We now have a toolkit for building parsers.
 #+BEGIN_SRC c++
   template <size_t Depth=5>
   struct JSON_Value
@@ -958,12 +1000,182 @@ We now have a reasonable toolkit for building parsers.
     ...
   };
 #+END_SRC
-To parse our JSON value, a reasonable approach is to use alternation on parsers
-for each type of value.
+To parse our JSON value, a reasonable approach is to use\\
+alternation on parsers for each type of value.
 
-** Parsing our ~JSON_Value~
+#+BEGIN_NOTES
+We're going to have 6 different parsers, each of which produces a ~JSON_Value~,
+and we're going to alternate them together.
 
+They will be mutually recursive: the parsers for objects and arrays call the
+value parsers.
 
+In order to achieve mutual recursion, we'll put them in a struct. (The next
+couple of slides contain a lot of code - sorry.)
+#+END_NOTES
+
+** Recursive parsing structure
+
+#+BEGIN_SRC c++
+  struct recur
+  {
+    template <std::size_t Depth = max_parse_depth>
+    static constexpr auto value_parser()
+    {
+      constexpr auto p =
+        fmap([] (std::string_view) { return JSON_Value<Depth>(std::monostate{}); },
+             make_string_parser("null"sv))
+        | fmap([] (std::string_view) { return JSON_Value<Depth>(true); },
+               make_string_parser("true"sv))
+        | fmap([] (std::string_view) { return JSON_Value<Depth>(false); },
+               make_string_parser("false"sv))
+        | fmap([] (auto n) { return JSON_Value<Depth>(n); },
+               number_parser())
+        | fmap([] (auto str) { return JSON_Value<Depth>(str); },
+               string_parser())
+        | array_parser<Depth>()
+        | object_parser<Depth>();
+      return skip_whitespace() < p;
+    }
+    ...
+#+END_SRC
+
+#+BEGIN_NOTES
+~value_parser~ is the top level entry point to our parser.
+
+Each argument of alternation must return the same type: in this case, they are
+JSON_Value parsers, obtained from each other parse type by fmapping in an
+appropriate function.
+
+Note the way we eat whitespace before a value. Easy with the applicative
+operator.
+#+END_NOTES
+
+** Recursive parsing structure
+
+#+BEGIN_SRC c++
+    ...
+    template <std::size_t Depth = max_parse_depth>
+    static constexpr auto array_parser() { ... }
+
+    template <std::size_t Depth = max_parse_depth>
+    static constexpr auto key_value_parser() { ... }
+
+    template <std::size_t Depth = max_parse_depth>
+    static constexpr auto object_parser() { ... }
+  };
+
+  template <>
+  constexpr auto recur::value_parser<0>() {
+    return fail(JSON_Value<0>{});
+  }
+
+  constexpr auto operator "" _json(const char* str, std::size_t len) {
+    return recur::value_parser<>()(std::string_view{str, len});
+  }
+#+END_SRC
+
+#+BEGIN_NOTES
+The body of everything is too much code to show, but you can imagine how these
+work.
+
+For ~array_parser~, we parse an open square bracket, then we use our
+separated_by combinator to parse values separated by commas, then we parse a
+closing square bracket. The JSON value we return is an array type value which
+has had its array member accumulated with the comma-separated values we parsed.
+
+Object parser is similar, except we use open/close curly braces, and key-value
+pairs separated by commas. A key-value pair is itself a string followed by a
+colon followed by a value.
+
+For the object and array parsers, each time we recurse through ~value_parser~
+again, we decrement the ~Depth~ template value so that we are producing the next
+level of the JSON tree.
+#+END_NOTES
+
+** Proof-of-concept
+\\
+\\
+What we have so far is the simplest proof-of-concept.\\
+\\
+\\
+It works (for suitable values of "works").\\
+\\
+\\
+It's a good starting point, but there are a few more problems to consider.
+
+#+BEGIN_NOTES
+What we have so far is a good starting point. The parsing toolkit is pretty useful.
+#+END_NOTES
+
+** Problem 1: A JSON number isn't an ~int~
+
+[[./json_number.png]]
+
+#+BEGIN_NOTES
+From json.org
+
+A json number is considerably more complex to parse than an int.
+
+But this can be done...
+
+You can see here we have some optional values in the parse. ~option~ is a useful
+combinator to add for that. (Run a parser, and if it fails, return a default value.)
+#+END_NOTES
+
+** Problem 2: A JSON string isn't a ~string_view~
+
+[[./json_string.png]]
+
+#+BEGIN_NOTES
+Strings are quite tricky to parse actually.
+
+Non-unicode escaped characters aren't especially hard. We can use ~operator<~ to
+match and discard a slash, then convert the following character appropriately.
+Unicode characters are a little more exacting.
+
+The essential point here is that we can't get away with just outputting part of
+the ~string_view~ that was the input. Parsing strings actually involves
+transforming the input into a different, and differently-sized, output.
+
+But again, we have all the tools to do this.
+#+END_NOTES
+
+** Problem 3: Template instantiation
+
+#+BEGIN_SRC bash
+$ time make
+[ 50%] Building CXX object main.cpp.o
+[100%] Linking CXX executable constexpr-all-the-things
+[100%] Build target constexpr-all-the-things
+
+real    A BLOODY...
+user     LONG...
+sys       TIME
+$
+#+END_SRC
+
+#+BEGIN_NOTES
+We need to get rid of some templates.
+#+END_NOTES
+
+** Problem 4: Arbitrary Limits
+
+#+BEGIN_SRC c++
+constexpr inline std::size_t max_parse_depth{3};
+
+static constexpr size_t max_vector_size{6};
+static constexpr size_t max_map_size{6};
+
+namespace cx
+{
+  using string = basic_string<char, 32>;
+}
+#+END_SRC
+
+#+BEGIN_NOTES
+Nobody likes arbitrary limits. And these are some pretty small limits, at that.
+#+END_NOTES
 
 * The Future
 
