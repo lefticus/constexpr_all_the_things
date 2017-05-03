@@ -594,6 +594,43 @@ Nothing else is required if it does not get invoked.
  - We could wrap objects in ~std::optional~ to allow for objects that are not default constructible
  - It should be possible to templatize on ~constexpr~ enabled allocator, making these containers optionally ~constexpr~
 
+** ~constexpr~ allocator?
+
+From cppreference.com
+
+#+BEGIN_SRC c++
+template <class T>
+struct SimpleAllocator {
+  typedef T value_type;
+  SimpleAllocator(/*ctor args*/);
+  template <class U> SimpleAllocator(const SimpleAllocator<U>& other);
+  T* allocate(std::size_t n);
+  void deallocate(T* p, std::size_t n);
+};
+template <class T, class U>
+bool operator==(const SimpleAllocator<T>&, const SimpleAllocator<U>&);
+template <class T, class U>
+bool operator!=(const SimpleAllocator<T>&, const SimpleAllocator<U>&);
+#+END_SRC
+
+** ~constexpr~ allocator?
+
+#+BEGIN_SRC c++
+template <class T, size_t Size>
+struct ConstexprAllocator {
+  typedef T value_type;
+  consstexpr ConstexprAllocator(/*ctor args*/);
+  template <class U> 
+  constexpr ConstexprAllocator(const ConstexprAllocator<U>& other);
+  constexpr T* allocate(std::size_t n);
+  constexpr  void deallocate(T* p, std::size_t n);
+  std::array<std::pair<bool, value_type>, Size> data; // bool for free flag
+};
+#+END_SRC
+
+Implementation left as an exercise to the reader.
+
+
 * Parsing JSON Value Literals
 
 Because we need some way to actually turn a string literal into our JSON
@@ -1527,8 +1564,30 @@ e.g. if you have ~constexpr push_back~ on your ~constexpr vector~ type, then
 ** Compile-time Cost - Release Build
 
 #+ATTR_REVEAL: :frag (appear)
- - 328MB RAM!
+ - 328MB RAM
  - 5s Build Time
  - 9K Binary
 
+** Compile-time Cost - Comparison
+
+Using the same nightly build of GCC, how long does this take to compile?
+
+#+BEGIN_SRC c++
+#include <regex>
+
+int main()
+{
+  std::regex attribute(R"(\s+(\S+)\s*=\s*('|")(.*?)\2)");
+}
+#+END_SRC
+
+#+ATTR_REVEAL: :frag (appear)
+5s Debug, 7.5s Release
+
 * End
+** Conclusion
+
+ * All but 3 standard algorithms can easily be made ~constexpr~
+ * There are holes around assignment operations in the STL
+ * Some interaction with C, ie ~<cmath>~ may hold back some operations
+ * ~constexpr~ allocators and ~constexpr~ destructors would make it possible to fully unify ~constexpr~ versions of containers with regular
