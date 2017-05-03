@@ -1044,11 +1044,13 @@ couple of slides contain a lot of code - sorry.)
 ~value_parser~ is the top level entry point to our parser.
 
 Each argument of alternation must return the same type: in this case, they are
-JSON_Value parsers, obtained from each other parse type by fmapping in an
+~JSON_Value~ parsers, obtained from each other parse type by fmapping in an
 appropriate function.
 
 Note the way we eat whitespace before a value. Easy with the applicative
-operator.
+operator. It would be "easy" to sprinkle ~skip_whitespace()~ everywhere and it
+would work... but a more disciplined approach is to eating whitespace *before*
+the parses that need it.
 #+END_NOTES
 
 ** Recursive parsing structure
@@ -1080,21 +1082,21 @@ The body of everything is too much code to show, but you can imagine how these
 work.
 
 For ~array_parser~, we parse an open square bracket, then we use our
-separated_by combinator to parse values separated by commas, then we parse a
+~separated_by~ combinator to parse values separated by commas, then we parse a
 closing square bracket. The JSON value we return is an array type value which
 has had its array member accumulated with the comma-separated values we parsed.
 
-Object parser is similar, except we use open/close curly braces, and key-value
-pairs separated by commas. A key-value pair is itself a string followed by a
-colon followed by a value.
+Object parser is similar, but open/close curly braces, and key-value pairs
+separated by commas. A key-value pair is itself a string followed by a colon
+followed by a value.
 
-For the object and array parsers, each time we recurse through ~value_parser~
-again, we decrement the ~Depth~ template value so that we are producing the next
-level of the JSON tree.
+Each time we recurse through ~value_parser~, we decrement the ~Depth~
+template value to produce the next level of the JSON tree.
+
+Note the use of ~fail~: an easy way to provide the right type for the base case.
 #+END_NOTES
 
-** Proof-of-concept
-\\
+* Parsing JSON Value Literals (Better)
 \\
 What we have so far is the simplest proof-of-concept.\\
 \\
@@ -1102,7 +1104,7 @@ What we have so far is the simplest proof-of-concept.\\
 It works (for suitable values of "works").\\
 \\
 \\
-It's a good starting point, but there are a few more problems to consider.
+It's a good starting point, but there are a few problems we need to address.
 
 #+BEGIN_NOTES
 What we have so far is a good starting point. The parsing toolkit is pretty useful.
@@ -1175,6 +1177,167 @@ namespace cx
 
 #+BEGIN_NOTES
 Nobody likes arbitrary limits. And these are some pretty small limits, at that.
+#+END_NOTES
+
+
+
+** Getting Rid Of Template Slowness
+All this recursive templatery is a problem.
+
+#+BEGIN_SRC c++
+  template <size_t Depth=5>
+  struct JSON_Value
+  {
+    struct Data
+    {
+      ...
+      cx::vector<JSON_Value<Depth-1>, max_vector_size> array;
+      cx::map<cx::static_string, JSON_Value<Depth-1>, max_map_size> object;
+    };
+    ...
+  };
+#+END_SRC
+
+** Solution: More Parsing!
+\\
+What we have is a parser for JSON values.\\
+\\
+But we could create more parsers...\\
+\\
+#+ATTR_REVEAL: :frag (appear)
+How about a parser for the *number* of JSON values required?
+
+#+BEGIN_NOTES
+Of course a parser can produce anything: it doesn't have to produce just JSON
+values. If we could parse out the number of values required by a literal, we
+could right-size an array of JSON values and then do another pass over the
+literal with our actual value parser, outputting into the array.
+#+END_NOTES
+
+** Number-of-values Parser
+We can write a parser that computes the number of values in a literal:
+
+ - Array -> 1 + number of values in children
+ - Object -> 1 + number of values in children
+ - Everything else -> 1
+
+We can reuse some structural components of our value parser, and a
+number-of-values parser is simpler in many places.
+
+** Number-of-values Parser
+
+Take the recursive function templates out of our value parser: instead, the
+struct itself is a template containing the right-sized array of values.
+
+#+BEGIN_SRC c++
+  template <std::size_t N>
+  struct recur
+  {
+    using V = cx::vector<JSON_Value, N>;
+    V vec{};
+
+    constexpr recur(parse_input_t s) {
+      value_parser(vec)(s);
+    }
+
+    static constexpr auto value_parser(V& v);
+    ...
+  };
+#+END_SRC
+
+#+BEGIN_NOTES
+A major source of compilation slowness was instantiating the parser function
+templates.
+
+The parser functions now do much the same as before except they ~push_back~ the
+parsed values into the array. And they ~return~ the array index of the element
+they created.
+
+We do the parsing on construction just to make things easy.
+#+END_NOTES
+
+** Non-templated ~JSON_Value~
+Now we can have a ~JSON_Value~ that isn't a template.
+
+#+BEGIN_SRC c++
+  struct JSON_Value
+  {
+    struct Data
+    {
+      ...
+      cx::vector<std::size_t, max_vector_size> array;
+      cx::map<cx::static_string, std::size_t, max_map_size> object;
+    };
+    ...
+  };
+#+END_SRC
+
+The array and object values store offsets into the externalized array.
+
+#+BEGIN_NOTES
+Now that we have externalized the storage of the values, the arrays and objects
+inside the ~JSON_Value~ store the offsets of their children.
+
+I tried having them store pointers to JSON_Values, but that didn't work
+~constexpr~.
+#+END_NOTES
+
+** Example parse
+\\
+#+BEGIN_SRC c++
+  auto jsval = "[1, [2, 3], 4]"_json;
+#+END_SRC
+\\
+Number of values: 6 (2 arrays, 4 numbers)\\
+\\
+[[./array_diagram.svg]]
+
+** Driving the Parse
+#+BEGIN_SRC c++
+  template <char... Cs>
+  constexpr auto numobjects()
+  {
+    std::initializer_list<char> il{Cs...};
+    return numobjects_recur<>::value_parser()(
+        std::string_view(il.begin(), il.size()))->first;
+  }
+
+  template <typename T, T... Ts>
+  constexpr auto operator "" _json()
+  {
+    constexpr std::initializer_list<T> il{Ts...};
+    return recur<numobjects<Ts...>()>(
+        std::string_view(il.begin(), il.size())).vec;
+  }
+#+END_SRC
+
+#+BEGIN_NOTES
+In order to get "constexpr arguments" we have to switch to the template version
+of the literal operator. That way we can pass the template arguments on to our
+numobjects parser.
+
+Note we're making a ~string_view~ out of the ~initializer_list~ expansion.
+
+What's returned from the top-level parse is the vector of values. The "root"
+value is at index 0.
+#+END_NOTES
+
+** Problem 3: Solved
+\\
+Cost: an extra pass\\
+\\
+Benefits:
+ - quicker compilation (no recursive templates!)
+ - no arbitrary hardcoded limit to depth
+\\
+#+ATTR_REVEAL: :frag appear
+#+BEGIN_SRC c++
+constexpr auto jsval = "([[[[[[[[[[[[1]]]]]]]]]]]])"_json;
+static_assert(jsval[0][0][0][0][0][0][0][0][0][0][0][0][0].to_Number() == 1);
+#+END_SRC
+
+#+BEGIN_NOTES
+Arbitrary depth!
 #+END_NOTES
 
 * The Future
