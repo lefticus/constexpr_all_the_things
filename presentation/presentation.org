@@ -1627,8 +1627,7 @@ int main()
 #+ATTR_REVEAL: :frag (appear)
 5s Debug, 7.5s Release
 
-* End
-** Conclusion
+* Conclusion
 
  * All but 3 standard algorithms can easily be made ~constexpr~
  * There are holes around assignment operations in the STL
