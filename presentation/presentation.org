@@ -54,6 +54,12 @@ if constexpr (jsv["feature-x-enabled"]) {
 When I first heard about ~constexpr~ I immediately thought of the potential for
 this: generating compile-time data structures with UDLs. And JSON is an obvious
 choice for a proof-of-concept.
+
+Why JSON?
+ - not too difficult (small grammar, well known)
+ - sufficiently interesting (deal with recursive structure at compile time
+   without memory management)
+ - ubiquitous, useful?
 #+END_NOTES
 
 * The Promise of ~constexpr~
@@ -346,7 +352,6 @@ in a ~constexpr~ context. This throw protects us if this class is used just for 
 statically sized vector.
 #+END_NOTES
 
-
 ** Why not ~std::next~?
 
 In GCC's implementation: internal ~__iterator_category~ is not ~constexpr~ constructible.
@@ -475,6 +480,9 @@ There's no technical reason for many algorithms not to be ~constexpr~.
  - ~equal~
  - ~copy~
 
+In the course of implementing this talk, we found uses for several ~constexpr~
+algorithms.
+
 ** JSON Value: First attempt
 
 #+BEGIN_SRC c++
@@ -583,6 +591,15 @@ Nothing else is required if it does not get invoked.
  - ~variant~
  - ~swap~
 
+#+BEGIN_NOTES
+Many of these parts of the STL have ~constexpr~ desires and partially
+~constexpr~ friendly implementations.
+
+In our experience, none of them quite achieves everything that is possibly
+~constexpr~. In many cases this could just be an oversight in the implementation
+or the standard and not because of some deep reason.
+#+END_NOTES
+
 ** Limitations of our containers
  
  - Fixed maximum size
@@ -629,7 +646,6 @@ struct ConstexprAllocator {
 #+END_SRC
 
 Implementation left as an exercise to the reader.
-
 
 * Parsing JSON Value Literals
 
@@ -1133,6 +1149,34 @@ template value to produce the next level of the JSON tree.
 Note the use of ~fail~: an easy way to provide the right type for the base case.
 #+END_NOTES
 
+** Error messages
+#+BEGIN_SRC c++
+  template <typename T, typename ErrorFn>
+  constexpr auto fail(T, ErrorFn f) {
+    return [=] (parse_input_t) -> parse_result_t<T> {
+      f();
+      return std::nullopt;
+    };
+  }
+
+  static constexpr auto array_parser() {
+    return ...
+      > (make_char_parser(']') | fail(']', [] { throw "expected ]"; }));
+  }
+#+END_SRC
+
+It's not a very good story.
+
+#+BEGIN_NOTES
+Support for error messages during compile time parsing is very rudimentary.
+
+This is the best I came up with: a fail parser that will throw and cause a
+compile error. So it tells you what went wrong, but it can't tell you anything
+about what it was parsing or where the error was.
+
+A bit more about this later.
+#+END_NOTES
+
 * Parsing JSON Value Literals (Better)
 \\
 What we have so far is the simplest proof-of-concept.\\
@@ -1215,8 +1259,6 @@ namespace cx
 #+BEGIN_NOTES
 Nobody likes arbitrary limits. And these are some pretty small limits, at that.
 #+END_NOTES
-
-
 
 ** Getting Rid Of Template Slowness
 All this recursive templatery is a problem.
@@ -1405,10 +1447,6 @@ We can do the number-of-values and total-string-size computation in a single
 pass\\
 (that returns the pair of sizes).
 
-#+BEGIN_NOTES
-
-#+END_NOTES
-
 ** String size limit removed
 \\
 #+BEGIN_SRC c++
@@ -1419,6 +1457,140 @@ Number of values: 6 (2 arrays, 4 numbers)\\
 Total string size: 14 (1 + 3 + 3 + 7)\\
 \\
 [[./string_size_diagram.svg]]
+
+** Remaining limits
+We still have limits on:
+
+ - array size
+ - object (map) size
+
+We can't naively do the same thing we did with strings, because values within
+arrays/objects aren't contiguous.
+
+#+BEGIN_NOTES
+We would like to be able to represent arrays as ~{offset, extent}~ but this is
+only possible if the values contained within the array are stored contiguously.
+#+END_NOTES
+
+** Arrays/Objects Aren't Contiguous
+As we saw before, because of arbitrary nesting.
+\\
+#+BEGIN_SRC c++
+  auto jsval = "[1, [2, 3], 4]"_json;
+#+END_SRC
+\\
+[[./array_diagram.svg]]
+
+#+BEGIN_NOTES
+This is because of the inherent depth-first traversal of parsing.
+
+So how can we make the storage of the compound values contiguous?
+#+END_NOTES
+
+** Add another pass
+Add a pass to make the parser "breadth-first".
+
+#+BEGIN_SRC c++
+  struct JSON_Value
+  {
+    union Data
+    {
+      std::string_view unparsed;
+      bool boolean;
+      double number;
+      ...
+    };
+    ...
+  };
+#+END_SRC
+
+#+BEGIN_NOTES
+We're parsing a ~string_view~ that represents a JSON value. Every JSON value
+contained is a ~string_view~ inside the top-level ~string_view~.
+
+All we need is a parser that returns the ~string_view~ for its value. We can
+then use it to parse the children of the array value and store each as an
+unparsed ~string_view~. Contiguously!
+#+END_NOTES
+
+** "Breadth-first" Parsing
+Now the array is parsed contiguously.
+\\
+#+BEGIN_SRC c++
+  auto jsval = "[1, [2, 3], 4]"_json;
+#+END_SRC
+\\
+[[./breadth_first_diagram.svg]]
+
+#+BEGIN_NOTES
+The diagram shows the intermediate stage of parsing the array.
+
+Once the array is parsed so that its immediate children occupy contiguous
+storage, we go back and parse its children again into "real" JSON values that
+are appended in the storage.
+#+END_NOTES
+
+** As Arrays, so Objects
+\\
+Arrays are now ~{offset, extent}~, so there is no limit on array size.\\
+\\
+Objects could be arrays of (string, value).\\
+\\
+We just need to deal with object keys.
+
+#+BEGIN_NOTES
+There is one remaining limit: the size of an object key (because it's a string).
+
+Well, now JSON values are small, and can store arbitrary length strings... so we
+might as well store an object key as a JSON value.
+#+END_NOTES
+
+** Object storage
+Objects are alternating strings and arbitrary values.
+\\
+#+BEGIN_SRC c++
+  auto jsval = R"({"McKern":2,  "McGoohan":6})"_json;
+#+END_SRC
+\\
+[[./object_diagram.svg]]
+
+#+BEGIN_NOTES
+Of course, 6 here should really be NaN. Perhaps that's another talk :)
+#+END_NOTES
+
+** Finally, no limits!
+#+BEGIN_SRC c++
+  struct JSON_Value
+  {
+    struct ExternalView {
+      std::size_t offset;
+      std::size_t extent;
+    };
+
+    union Data {
+      std::string_view unparsed;
+      bool boolean;
+      double number;
+      ExternalView external_string;
+      ExternalView external_array;
+      ExternalView external_object;
+    };
+    ...
+  };
+#+END_SRC
+
+#+BEGIN_NOTES
+This is the final representation of a JSON value as produced by our parsing
+scheme.
+#+END_NOTES
+
+** Parsing: Conclusion
+#+ATTR_REVEAL: :frag (appear)
+ - ~constexpr~ lambdas enable composable compile-time parsing
+ - parser combinators enable more complex literals
+ - multiple passes can be used thanks to template UDL operators and ~string_view~
+ - adding extra passes can solve almost any problem...
+ - could parsing be helped by a (good?) C++ concept?
 
 * The Future
 
@@ -1564,6 +1736,10 @@ This proposal adds debugging capability at compile time.
 
 [[./constexpr_trace.png]]
 
+#+BEGIN_NOTES
+This would be useful for reporting parse errors on ~constexpr~ literals.
+#+END_NOTES
+
 ** ~constexpr_vector~
 
 This other proposal from the same author allows for a special type of ~constexpr_vector~
@@ -1595,6 +1771,8 @@ e.g. if you have ~constexpr push_back~ on your ~constexpr vector~ type, then
  - ~constexpr~ code forces you to consider what your code is doing and the lifetime of objects (in a good way).
  - Tree like data structures are difficult to reason about
  - Selecting data structure sizes can be difficult
+ - Error messages from heavily composed lambdas are... challenging to deal with
+ - Debugging currently means "go back and think about the types"
 
 ** Compile-time Cost - Debug Build
 
@@ -1603,6 +1781,10 @@ e.g. if you have ~constexpr push_back~ on your ~constexpr vector~ type, then
  - >2 Minutes Build Time
  - 338K Binary
  - Tweaking debug level can have a great effect. This might be related to symbol sizes.
+
+#+BEGIN_NOTES
+Explain exactly *what* is being built here?
+#+END_NOTES
 
 ** Compile-time Cost - Release Build
 
@@ -1629,7 +1811,9 @@ int main()
 
 * Conclusion
 
- * All but 3 standard algorithms can easily be made ~constexpr~
+ * All but 3 standard algorithms can (easily?) be made ~constexpr~
+ - (And maybe ~stable_sort~, ~stable_partition~ and ~inplace_merge~ could work ~constexpr~ without a buffer)
  * There are holes around assignment operations in the STL
+ - Many iterator operations could be made ~constexpr~ for use with ~constexpr~ containers
  * Some interaction with C, ie ~<cmath>~ may hold back some operations
  * ~constexpr~ allocators and ~constexpr~ destructors would make it possible to fully unify ~constexpr~ versions of containers with regular
