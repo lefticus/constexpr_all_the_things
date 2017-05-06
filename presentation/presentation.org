@@ -35,18 +35,18 @@
 We want to do this:
 
 #+BEGIN_SRC c++
-constexpr auto jsv
-  = R"({
-        "feature-x-enabled": true,
-        "value-of-y": 1729,
-        "z-options": {"a": null,
-                      "b": "220 and 284",
-                      "c": [6, 28, 496]}
-       })"_json;
-if constexpr (jsv["feature-x-enabled"]) {
-  // code for feature x
-} else {
-  // code when feature x turned off
+  constexpr auto jsv
+    = R"({
+          "feature-x-enabled": true,
+          "value-of-y": 1729,
+          "z-options": {"a": null,
+                        "b": "220 and 284",
+                        "c": [6, 28, 496]}
+         })"_json;
+  if constexpr (jsv["feature-x-enabled"]) {
+    // code for feature x
+  } else {
+    // code when feature x turned off
   }
 #+END_SRC
 
@@ -180,19 +180,26 @@ We would /like/ the second call to ~fnv1~ to use an efficient runtime algorithm.
 You /can/ do something like this...
 
 #+BEGIN_SRC c++
-template <bool>
-using true_t = std::true_type;
+template <typename T>
+constexpr auto booler(T) { return true; }
 
 template <typename T>
-constexpr auto has_constexpr_default_constructor(int) -> true_t<(T{}, true)>;
-
-template <typename>
-constexpr auto has_constexpr_default_constructor(...) -> std::false_type;
-
-template <typename T>
-struct is_constexpr_default_constructible
-  : decltype(has_constexpr_default_constructor<T>(0)){};
+using constexpr_construct_t = std::integral_constant<bool, booler(T{})>;
 #+END_SRC
+
+And then feed it to the detection idiom.
+
+#+BEGIN_NOTES
+If ~T~ is ~constexpr~ constructible, it will be admissible as a compile-time
+argument to ~booler~, and therefore the result will be a well-formed template
+argument.
+
+~booler~ is similar to ~void_t~ here.
+
+Whatever expression we put in the arugment to booler will have to be evaluated
+at compile time in order for the type to be well-formed. And we can then use
+this type with the new detection idiom.
+#+END_NOTES
 
 ** ~constexpr~ SFINAE?
 
@@ -200,7 +207,7 @@ struct is_constexpr_default_constructible
 template <typename StringType>
 constexpr auto fnv1(const StringType& s)
 {
-  if constexpr(is_constexpr_default_constructible<StringType>::value) {
+  if constexpr(is_detected_v<constexpr_construct_t, StringType>) {
     return cx::fnv1(s);
   } else {
     return runtime::fnv1(s);
@@ -1446,6 +1453,10 @@ We *can* use the same technique:
 We can do the number-of-values and total-string-size computation in a single
 pass\\
 (that returns the pair of sizes).
+
+#+BEGIN_NOTES
+Structural bindings don't work ~constexpr~.
+#+END_NOTES
 
 ** String size limit removed
 \\
