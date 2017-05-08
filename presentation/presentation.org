@@ -181,22 +181,20 @@ You /can/ do something like this...
 
 #+BEGIN_SRC c++
 template <typename T>
-constexpr auto booler(T) { return true; }
-
-template <typename T>
-using constexpr_construct_t = std::integral_constant<bool, booler(T{})>;
+using constexpr_construct_t = std::integral_constant<bool, (T{}, true)>;
 #+END_SRC
 
 And then feed it to the detection idiom.
 
 #+BEGIN_NOTES
 If ~T~ is ~constexpr~ constructible, it will be admissible as a compile-time
-argument to ~booler~, and therefore the result will be a well-formed template
-argument.
+argument to the comma operator~, and therefore the result will be a well-formed
+template argument.
 
-~booler~ is similar to ~void_t~ here.
+The use of the comma is similar to ~void_t~ here: we're turning any value into a
+boolean.
 
-Whatever expression we put in the arugment to booler will have to be evaluated
+Whatever expression we put in the arguement to comma will have to be evaluated
 at compile time in order for the type to be well-formed. And we can then use
 this type with the new detection idiom.
 #+END_NOTES
@@ -222,8 +220,8 @@ Caveats: many.
  - verbosity, compile time?
 
 #+BEGIN_NOTES
-If you're going to go with this kind of thing, you might as well define
-completely different types for use at compile time and runtime.
+If you're going to go with this kind of thing, you're practically going down the
+route of completely different types for use at compile time and runtime.
 #+END_NOTES
 
 ** ~constexpr~ SFINAE?
