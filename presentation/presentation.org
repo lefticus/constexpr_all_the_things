@@ -188,7 +188,7 @@ And then feed it to the detection idiom.
 
 #+BEGIN_NOTES
 If ~T~ is ~constexpr~ constructible, it will be admissible as a compile-time
-argument to the comma operator~, and therefore the result will be a well-formed
+argument to the comma operator, and therefore the result will be a well-formed
 template argument.
 
 The use of the comma is similar to ~void_t~ here: we're turning any value into a
@@ -231,6 +231,17 @@ Another possible (better) solution.
 [[./constexpr_operator.png]]
 
 * Building ~constexpr~ JSON Values
+
+#+BEGIN_SRC c++
+  constexpr auto jsv
+    = R"({
+          "feature-x-enabled": true,
+          "value-of-y": 1729,
+          "z-options": {"a": null,
+                        "b": "220 and 284",
+                        "c": [6, 28, 496]}
+         })"_json;
+#+END_SRC
 
 Two problems to solve:
 
@@ -433,7 +444,7 @@ class map
 ** ~constexpr~ maps
 
 #+BEGIN_SRC c++
-  auto get_colors() {
+  constexpr auto get_colors() {
     cx::map<cx::static_string, std::uint32_t> colors;
     colors["red"] = 0xFF0000;
     colors["green"] = 0x00FF00;
@@ -441,7 +452,7 @@ class map
   }
 
   int main() {
-    constexpr colors = get_colors();
+    constexpr auto colors = get_colors();
     colors["red"]; // returns 0xFF0000
     colors["blue"]; // compile-time error
   }
@@ -449,8 +460,8 @@ class map
 
 ** Why not ~std::pair~?
 
-Standard library definition does not have ~constexpr operator=~ \\
-for ~std::pair~\\
+Standard library definition does not have\\
+~constexpr operator=~ for ~std::pair~\\
 \\
 This is the only aspect of ~std::pair~ that is not ~constexpr~
 
@@ -519,6 +530,8 @@ template <> struct JSON_Value<0> {};
 This makes for a lot of template instantiations, and has some obvious limitations.
 
 The max sizes for arrays and objects are determined empirically.
+
+We use ~struct~ here initially, but ~union~ later.
 #+END_NOTES
 
 ** JSON Value: First attempt
@@ -722,7 +735,7 @@ using parse_result_t = cx::optional<cx::pair<T, parse_input_t>>;
 
 And let's make a parser that matches a single ~char~ that we give it.
 #+BEGIN_SRC c++
-auto match_char(parse_input_t s, char c) -> parse_result_t<char>
+constexpr auto match_char(parse_input_t s, char c) -> parse_result_t<char>
 {
   if (s.empty() || s[0] != c) return std::nullopt;
   return parse_result_t<char>(
@@ -739,7 +752,7 @@ parsers.
 ** A Simple Parser
 #+BEGIN_SRC c++
 // Ceci n'est pas une parser.
-auto match_char(parse_input_t s, char c) -> parse_result_t<char>;
+constexpr auto match_char(parse_input_t s, char c) -> parse_result_t<char>;
 #+END_SRC
 
 ~match_char~ isn't actually a parser, because it has the wrong signature.\\
@@ -986,7 +999,7 @@ This parser eats whitespace.
 #+END_SRC
 
 #+BEGIN_NOTES
-Alternation of each individual parser.
+Alternation of each individual parser. (Also, we could use ~one_of~ here.)
 
 Then many (zero or more) of the resulting parser.
 
@@ -1176,8 +1189,9 @@ It's not a very good story.
 Support for error messages during compile time parsing is very rudimentary.
 
 This is the best I came up with: a fail parser that will throw and cause a
-compile error. So it tells you what went wrong, but it can't tell you anything
-about what it was parsing or where the error was.
+compile error. So it sort of tells you what went wrong, and probably tells you
+the line the malformed literal is on, but it can't tell you anything about where
+in the parse the error was.
 
 A bit more about this later.
 #+END_NOTES
@@ -1369,12 +1383,17 @@ I tried having them store pointers to JSON_Values, but that didn't work
 ** Example parse
 \\
 #+BEGIN_SRC c++
-  auto jsval = "[1, [2, 3], 4]"_json;
+  constexpr auto jsval = "[1, [2, 3], 4]"_json;
 #+END_SRC
 \\
 Number of values: 6 (2 arrays, 4 numbers)\\
 \\
 [[./array_diagram.svg]]
+
+#+BEGIN_NOTES
+Note the offset numbers for the array(s) here. They are not indices into the
+external storage yet, they are just offsets from the current.
+#+END_NOTES
 
 ** Driving the Parse
 #+BEGIN_SRC c++
@@ -1459,7 +1478,7 @@ Structural bindings don't work ~constexpr~.
 ** String size limit removed
 \\
 #+BEGIN_SRC c++
-  auto jsval = R"(["X", ["ALL", "the"], "things!"])"_json;
+  constexpr auto jsval = R"(["X", ["ALL", "the"], "things!"])"_json;
 #+END_SRC
 \\
 Number of values: 6 (2 arrays, 4 numbers)\\
@@ -1485,7 +1504,7 @@ only possible if the values contained within the array are stored contiguously.
 As we saw before, because of arbitrary nesting.
 \\
 #+BEGIN_SRC c++
-  auto jsval = "[1, [2, 3], 4]"_json;
+  constexpr auto jsval = "[1, [2, 3], 4]"_json;
 #+END_SRC
 \\
 [[./array_diagram.svg]]
@@ -1520,19 +1539,22 @@ contained is a ~string_view~ inside the top-level ~string_view~.
 All we need is a parser that returns the ~string_view~ for its value. We can
 then use it to parse the children of the array value and store each as an
 unparsed ~string_view~. Contiguously!
+
+What was earlier ~struct~ is ~union~ here.
 #+END_NOTES
 
 ** "Breadth-first" Parsing
 Now the array is parsed contiguously.
 \\
 #+BEGIN_SRC c++
-  auto jsval = "[1, [2, 3], 4]"_json;
+  constexpr auto jsval = "[1, [2, 3], 4]"_json;
 #+END_SRC
 \\
 [[./breadth_first_diagram.svg]]
 
 #+BEGIN_NOTES
-The diagram shows the intermediate stage of parsing the array.
+The diagram shows the intermediate stage of parsing the array. The array is
+stored as offset + extent.
 
 Once the array is parsed so that its immediate children occupy contiguous
 storage, we go back and parse its children again into "real" JSON values that
@@ -1558,7 +1580,7 @@ might as well store an object key as a JSON value.
 Objects are alternating strings and arbitrary values.
 \\
 #+BEGIN_SRC c++
-  auto jsval = R"({"McKern":2,  "McGoohan":6})"_json;
+  constexpr auto jsval = R"({"McKern":2,  "McGoohan":6})"_json;
 #+END_SRC
 \\
 [[./object_diagram.svg]]
@@ -1660,10 +1682,14 @@ struct S {
 static_assert(std::is_trivially_destructible_v<S>);
 #+END_SRC
 
+#+BEGIN_NOTES
+If we put "~S() = default;" then that /is/ trivially destructible.
+#+END_NOTES
+
 ** Why is this a problem?
 
-It's easy to build a ~constexpr~ enabled type that can grow at runtime or fail to
-compile if it gets too big in ~constexpr~ context.
+It's easy to build a ~constexpr~ enabled type that can grow at runtime,\\
+or fail to compile if it gets too big in ~constexpr~ context.
 
 #+BEGIN_SRC c++
 struct Container {
@@ -1685,16 +1711,17 @@ struct Container {
 
 ** Why is this a problem?
 
-But as soon as we add a destructor, the class is no longer usable in a ~constexpr~ context.
+*But*: as soon as we add a destructor, the class is no longer usable in a ~constexpr~ context.
 
-So we can build this type, but we are required to leak memory if it grows beyond the static size!
+So we can build this type, but we are required to leak memory\\
+if it grows beyond the static size!
 
 ** Solutions to the ~constexpr~ destructor problem
 
 #+BEGIN_SRC c++
 struct Container {
   ~Container() {
-    // this proposal allows for an empty constructor to be allowed
+    // this proposal allows for an empty destructor to be allowed
     if constexpr(something) {
       // do something
     }
@@ -1739,6 +1766,12 @@ int main()
 Several times during debugging we had to take the code from compile time context 
 to runtime context to allow for actual debugging.
 
+#+BEGIN_NOTES
+In building the data structure, switching to runtime context was useful.
+
+In building up parsers, it was mostly simplify expressions and puzzle over the types.
+#+END_NOTES
+
 ** The debugging problem
 
 This proposal adds debugging capability at compile time.
@@ -1758,18 +1791,25 @@ that is allowed to grow and shrink at compile time only, requiring compiler supp
 
 * ~constexpr~ STL possibilities
 ** algorithms
+\\
 Weakened complexity guarantees on ~stable_sort~, ~inplace_merge~, ~stable_partition~?
-(They make use of temporary buffers to improve complexity.)
+(They make use of temporary buffers to improve complexity.)\\
+\\
+Are there others that might need to have\\
+weakened complexity guarantees for compile time use?
 
-Are there others that might need to have weakened complexity guarantees for compile time use?
+#+BEGIN_NOTES
+The temporary buffers aren't required for the algorithms to be correct, merely
+to make them efficient.
+#+END_NOTES
 
 ** iterators
 If you have a ~constexpr~ container, you want the iterators to all be ~constexpr~.
 
-Many iterators could be ~constexpr~ and usable in a ~constexpr~ context if the
-operations on the corresponding containers are.
+Many iterators could be ~constexpr~ and usable in a ~constexpr~ context\\
+if the operations on the corresponding containers are.
 
-e.g. if you have ~constexpr push_back~ on your ~constexpr vector~ type, then
+e.g. if you have ~constexpr push_back~ on your ~constexpr vector~ type,\\
 ~back_insert_iterator~ could easily be ~constexpr~.
 
 * The Cost
@@ -1778,10 +1818,14 @@ e.g. if you have ~constexpr push_back~ on your ~constexpr vector~ type, then
 #+ATTR_REVEAL: :frag (appear)
  - Flat data structures are easy to reason about
  - ~constexpr~ code forces you to consider what your code is doing and the lifetime of objects (in a good way).
- - Tree like data structures are difficult to reason about
+ - Tree-like data structures are difficult to reason about
  - Selecting data structure sizes can be difficult
  - Error messages from heavily composed lambdas are... challenging to deal with
- - Debugging currently means "go back and think about the types"
+ - Debugging often currently means "go back and think about the types"
+
+#+BEGIN_NOTES
+Is recursive computation harder to reason about? It depends on the problem, I think.
+#+END_NOTES
 
 ** Compile-time Cost - Debug Build
 
@@ -1793,6 +1837,8 @@ e.g. if you have ~constexpr push_back~ on your ~constexpr vector~ type, then
 
 #+BEGIN_NOTES
 Explain exactly *what* is being built here?
+
+Changing -g3 to -g1 greatly improves build time/space.
 #+END_NOTES
 
 ** Compile-time Cost - Release Build
@@ -1801,6 +1847,12 @@ Explain exactly *what* is being built here?
  - 328MB RAM
  - 5s Build Time
  - 9K Binary
+
+#+BEGIN_NOTES
+This is pretty acceptable, especially when you consider that you are potentially
+replacing whole steps in the build chain, possibly reducing the need to maintain
+code generation tools, and moving the one source of truth into the C++ itself.
+#+END_NOTES
 
 ** Compile-time Cost - Comparison
 
@@ -1818,11 +1870,20 @@ int main()
 #+ATTR_REVEAL: :frag (appear)
 5s Debug, 7.5s Release
 
+#+BEGIN_NOTES
+Slow build times are not unknown to the STL today.
+#+END_NOTES
+
 * Conclusion
 
+#+ATTR_REVEAL: :frag (appear)
  * All but 3 standard algorithms can (easily?) be made ~constexpr~
- - (And maybe ~stable_sort~, ~stable_partition~ and ~inplace_merge~ could work ~constexpr~ without a buffer)
  * There are holes around assignment operations in the STL
- - Many iterator operations could be made ~constexpr~ for use with ~constexpr~ containers
+ * Many iterator operations could be made ~constexpr~ for use with ~constexpr~ containers
  * Some interaction with C, ie ~<cmath>~ may hold back some operations
- * ~constexpr~ allocators and ~constexpr~ destructors would make it possible to fully unify ~constexpr~ versions of containers with regular
+ * ~constexpr~ lambdas unlock the potential for complex UDLs
+ * ~constexpr~ allocators and ~constexpr~ destructors would make it possible to unify ~constexpr~ containers with regular ones
+
+#+ATTR_REVEAL: :frag appear
+Thanks!\\
+https://github.com/lefticus/constexpr_all_the_things
