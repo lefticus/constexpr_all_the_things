@@ -23,6 +23,7 @@ else()
     -ftemplate-backtrace-limit=0
     -ffunction-sections
     -Wall -Wextra -Werror -pedantic-errors
+    -Wno-gnu-string-literal-operator-template
     -Wcast-align
     -Wcast-qual
     -Wctor-dtor-privacy

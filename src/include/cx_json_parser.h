@@ -597,40 +597,43 @@ namespace JSON
       return value_proxy{0, object_storage, string_storage};
     }
 
+    using Value_Proxy = value_proxy<NumObjects, cx::vector<value, NumObjects>,
+                                   cx::basic_string<char, StringSize>>;
+
     template <typename K,
               std::enable_if_t<!std::is_integral<K>::value, int> = 0>
     constexpr auto operator[](const K& s) const {
-      return value_proxy{0, object_storage, string_storage}[s];
+      return Value_Proxy{0, object_storage, string_storage}[s];
     }
     template <typename K,
               std::enable_if_t<!std::is_integral<K>::value, int> = 0>
     constexpr auto operator[](const K& s) {
-      return value_proxy{0, object_storage, string_storage}[s];
+      return Value_Proxy{0, object_storage, string_storage}[s];
     }
     constexpr auto object_Size() const {
-      return value_proxy{0, object_storage, string_storage}.object_Size();
+      return Value_Proxy{0, object_storage, string_storage}.object_Size();
     }
 
     constexpr auto operator[](std::size_t idx) const {
-      return value_proxy{0, object_storage, string_storage}[idx];
+      return Value_Proxy{0, object_storage, string_storage}[idx];
     }
     constexpr auto operator[](std::size_t idx) {
-      return value_proxy{0, object_storage, string_storage}[idx];
+      return Value_Proxy{0, object_storage, string_storage}[idx];
     }
     constexpr auto array_Size() const {
-      return value_proxy{0, object_storage, string_storage}.array_Size();
+      return Value_Proxy{0, object_storage, string_storage}.array_Size();
     }
 
     constexpr auto is_Null() const { return object_storage[0].is_Null(); }
 
     constexpr decltype(auto) to_String() const {
-      return value_proxy{0, object_storage, string_storage}.to_String();
+      return Value_Proxy{0, object_storage, string_storage}.to_String();
     }
     constexpr decltype(auto) to_String() {
-      return value_proxy{0, object_storage, string_storage}.to_String();
+      return Value_Proxy{0, object_storage, string_storage}.to_String();
     }
     constexpr auto string_Size() const {
-      return value_proxy{0, object_storage, string_storage}.string_Size();
+      return Value_Proxy{0, object_storage, string_storage}.string_Size();
     }
 
     constexpr decltype(auto) to_Number() const { return object_storage[0].to_Number(); }
@@ -650,16 +653,19 @@ namespace JSON
 
   namespace literals
   {
+
+    // why cannot we get regular literal operator template here?
     template <typename T, T... Ts>
     constexpr auto operator "" _json()
     {
-      constexpr std::initializer_list<T> il{Ts...};
+      std::initializer_list<T> il{Ts...};
       // I tried using structured bindings here, but g++ says:
       // "error: decomposition declaration cannot be declared 'constexpr'"
       constexpr auto S = sizes<Ts...>();
       return value_wrapper<S.num_objects, S.string_size>(
           std::string_view(il.begin(), il.size()));
     }
+
   }
 
 }
