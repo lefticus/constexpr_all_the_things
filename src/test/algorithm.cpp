@@ -128,24 +128,28 @@ void algo_tests_nonmod()
 
 void algo_tests_mod()
 {
+  using std::cbegin;
+  using std::cend;
   using std::begin;
   using std::end;
 
+
   {
-    constexpr int il[] = {1, 3, 5, 7, 9};
+    
     constexpr auto vec = [&] () {
+        auto il = {1, 3, 5, 7, 9};
         cx::vector<int, 5> v;
-        cx::copy(begin(il), end(il), cx::back_insert_iterator(v));
+        cx::copy(cbegin(il), cend(il), cx::back_insert_iterator(v));
         return v;
     }();
     static_assert(vec.size() == 5, "copy fail");
   }
 
   {
-    constexpr int il[] = {1, 2, 5, 7, 4};
     constexpr auto vec = [&] () {
+        auto il = {1, 2, 5, 7, 4};
         cx::vector<int, 5> v;
-        cx::copy_if(begin(il), end(il), cx::back_insert_iterator(v),
+        cx::copy_if(cbegin(il), cend(il), cx::back_insert_iterator(v),
                     [] (auto i) { return i % 2 == 0; });
         return v;
     }();
@@ -153,28 +157,28 @@ void algo_tests_mod()
   }
 
   {
-    constexpr int il[] = {1, 3, 5, 7, 9};
     constexpr auto vec = [&] () {
+        auto il = {1, 3, 5, 7, 9};
         cx::vector<int, 5> v;
-        cx::copy_n(begin(il), 3, cx::back_insert_iterator(v));
+        cx::copy_n(cbegin(il), 3, cx::back_insert_iterator(v));
         return v;
     }();
     static_assert(vec.size() == 3, "copy_n fail");
   }
 
   {
-    constexpr int il[] = {1, 3, 5, 7, 9};
     constexpr auto vec = [&] () {
+        auto il = {1, 3, 5, 7, 9};
         cx::vector<int, 5> v = {0,0,0,0,0};
-        cx::copy_backward(begin(il), end(il), v.end());
+        cx::copy_backward(cbegin(il), cend(il), v.end());
         return v;
     }();
     static_assert(vec.size() == 5 && vec[0] == 1 && vec[4] == 9, "copy_backward fail");
   }
 
   {
-    constexpr int il[] = {1, 3, 5, 7, 9};
     constexpr auto vec = [&] () {
+        auto il = {1, 3, 5, 7, 9};
         cx::vector<int, 5> v;
         cx::move(begin(il), end(il), cx::back_insert_iterator(v));
         return v;
@@ -183,8 +187,8 @@ void algo_tests_mod()
   }
 
   {
-    constexpr int il[] = {1, 3, 5, 7, 9};
     constexpr auto vec = [&] () {
+        auto il = {1, 3, 5, 7, 9};
         cx::vector<int, 5> v = {0,0,0,0,0};
         cx::move_backward(begin(il), end(il), v.end());
         return v;

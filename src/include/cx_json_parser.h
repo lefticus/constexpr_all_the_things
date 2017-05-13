@@ -597,8 +597,8 @@ namespace JSON
       return value_proxy{0, object_storage, string_storage};
     }
 
-    using Value_Proxy = value_proxy<NumObjects, cx::vector<value, NumObjects>,
-                                   cx::basic_string<char, StringSize>>;
+    using Value_Proxy = value_proxy<NumObjects, const value[NumObjects],
+                                   const cx::basic_string<char, StringSize>>;
 
     template <typename K,
               std::enable_if_t<!std::is_integral<K>::value, int> = 0>
