@@ -30,7 +30,7 @@
 "<h4>C++Now / Tuesday 16th May 2017</h4>"))
 #+END_SRC
 
-* Don't Bury The Lede
+* Don't Bury The Lead
 
 We want to do this:
 
@@ -1416,8 +1416,8 @@ external storage yet, they are just offsets from the current.
 
 #+BEGIN_NOTES
 In order to get "constexpr arguments" we have to switch to the template version
-of the literal operator. That way we can pass the template arguments on to our
-numobjects parser.
+of the literal operator (gnu extension based on N3599). That way we can pass the
+template arguments on to our numobjects parser.
 
 Note we're making a ~string_view~ out of the ~initializer_list~ expansion.
 
@@ -1481,7 +1481,7 @@ Structural bindings don't work ~constexpr~.
   constexpr auto jsval = R"(["X", ["ALL", "the"], "things!"])"_json;
 #+END_SRC
 \\
-Number of values: 6 (2 arrays, 4 numbers)\\
+Number of values: 6 (2 arrays, 4 strings)\\
 Total string size: 14 (1 + 3 + 3 + 7)\\
 \\
 [[./string_size_diagram.svg]]
