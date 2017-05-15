@@ -41,12 +41,12 @@ We want to do this:
 <div class="org-src-container">
 
 <pre  class="src src-c++"><span style="color: #a020f0;">constexpr</span> <span style="color: #a020f0;">auto</span> jsv
-  = R<span style="color: #000000; background-color: #ffa500; font-weight: bold;">"</span><span style="color: #b22222;">({</span>
-<span style="color: #b22222;">        "</span>feature-x-enabled<span style="color: #000000; background-color: #ffa500; font-weight: bold;">"</span><span style="color: #b22222;">: true,</span>
-<span style="color: #b22222;">        "</span>value-of-y<span style="color: #000000; background-color: #ffa500; font-weight: bold;">"</span><span style="color: #b22222;">: 1729,</span>
-<span style="color: #b22222;">        "</span>z-options<span style="color: #b22222;">": {"</span>a<span style="color: #000000; background-color: #ffa500; font-weight: bold;">"</span><span style="color: #b22222;">: null,</span>
-<span style="color: #b22222;">                      "</span>b<span style="color: #b22222;">": "</span><span style="color: #008b8b;">220</span> <span style="color: #a020f0;">and</span> <span style="color: #008b8b;">284</span><span style="color: #000000; background-color: #ffa500; font-weight: bold;">"</span><span style="color: #b22222;">,</span>
-<span style="color: #b22222;">                      "</span>c<span style="color: #000000; background-color: #ffa500; font-weight: bold;">"</span><span style="color: #b22222;">: [6, 28, 496]}</span>
+  = R<span style="color: #b22222;">"({</span>
+<span style="color: #b22222;">        "</span>feature-x-enabled<span style="color: #b22222;">"</span><span style="color: #b22222;">: true,</span>
+<span style="color: #b22222;">        "</span>value-of-y<span style="color: #b22222;">": 1729,</span>
+<span style="color: #b22222;">        "</span>z-options<span style="color: #b22222;">": {"</span>a<span style="color: #b22222;">": null,</span>
+<span style="color: #b22222;">                      "</span>b<span style="color: #b22222;">": "</span><span style="color: #008b8b;">220</span> <span style="color: #a020f0;">and</span> <span style="color: #008b8b;">284</span><span style="color: #b22222;">",</span>
+<span style="color: #b22222;">                      "</span>c<span style="color: #b22222;">": [6, 28, 496]}</span>
 <span style="color: #b22222;">       })"</span>_json;
 <span style="color: #a020f0;">if</span> <span style="color: #a020f0;">constexpr</span> <span style="color: #707183;">(</span>jsv<span style="color: #7388d6;">[</span><span style="color: #b22222;">"feature-x-enabled"</span><span style="color: #7388d6;">]</span><span style="color: #707183;">)</span> <span style="color: #707183;">{</span>
   <span style="color: #bebebe;">// </span><span style="color: #bebebe;">code for feature x</span>
@@ -368,12 +368,12 @@ Another possible (better) solution.
 <div class="org-src-container">
 
 <pre  class="src src-c++"><span style="color: #a020f0;">constexpr</span> <span style="color: #a020f0;">auto</span> jsv
-  = R<span style="color: #000000; background-color: #ffa500; font-weight: bold;">"</span><span style="color: #b22222;">({</span>
-<span style="color: #b22222;">        "</span>feature-x-enabled<span style="color: #000000; background-color: #ffa500; font-weight: bold;">"</span><span style="color: #b22222;">: true,</span>
-<span style="color: #b22222;">        "</span>value-of-y<span style="color: #000000; background-color: #ffa500; font-weight: bold;">"</span><span style="color: #b22222;">: 1729,</span>
-<span style="color: #b22222;">        "</span>z-options<span style="color: #b22222;">": {"</span>a<span style="color: #000000; background-color: #ffa500; font-weight: bold;">"</span><span style="color: #b22222;">: null,</span>
-<span style="color: #b22222;">                      "</span>b<span style="color: #b22222;">": "</span><span style="color: #008b8b;">220</span> <span style="color: #a020f0;">and</span> <span style="color: #008b8b;">284</span><span style="color: #000000; background-color: #ffa500; font-weight: bold;">"</span><span style="color: #b22222;">,</span>
-<span style="color: #b22222;">                      "</span>c<span style="color: #000000; background-color: #ffa500; font-weight: bold;">"</span><span style="color: #b22222;">: [6, 28, 496]}</span>
+  = R<span style="color: #b22222;">"({</span>
+<span style="color: #b22222;">        "</span>feature-x-enabled<span style="color: #b22222;">": true,</span>
+<span style="color: #b22222;">        "</span>value-of-y<span style="color: #b22222;">": 1729,</span>
+<span style="color: #b22222;">        "</span>z-options<span style="color: #b22222;">": {"</span>a<span style="color: #b22222;">": null,</span>
+<span style="color: #b22222;">                      "</span>b<span style="color: #b22222;">": "</span><span style="color: #008b8b;">220</span> <span style="color: #a020f0;">and</span> <span style="color: #008b8b;">284</span><span style="color: #b22222;">",</span>
+<span style="color: #b22222;">                      "</span>c<span style="color: #b22222;">": [6, 28, 496]}</span>
 <span style="color: #b22222;">       })"</span>_json;
 </pre>
 </div>
@@ -2775,7 +2775,7 @@ Using the same nightly build of GCC, how long does this take to compile?
 
 <span style="color: #228b22;">int</span> <span style="color: #0000ff;">main</span><span style="color: #707183;">()</span>
 <span style="color: #707183;">{</span>
-  <span style="color: #008b8b;">std</span>::<span style="color: #228b22;">regex</span> <span style="color: #0000ff;">attribute</span><span style="color: #7388d6;">(</span>R<span style="color: #b22222;">"(\s+(\S+)\s*=\s*('|"</span><span style="color: #7388d6;">)(</span>.*?<span style="color: #7388d6;">)</span>\<span style="color: #008b8b;">2</span><span style="color: #88090B;">)</span><span style="color: #000000; background-color: #ffa500; font-weight: bold;">"</span><span style="color: #b22222;">);</span>
+  <span style="color: #008b8b;">std</span>::<span style="color: #228b22;">regex</span> <span style="color: #0000ff;">attribute</span><span style="color: #7388d6;">(</span>R<span style="color: #b22222;">"(\s+(\S+)\s*=\s*('|"</span><span style="color: #7388d6;">)(</span>.*?<span style="color: #7388d6;">)</span>\<span style="color: #008b8b;">2</span><span style="color: #88090B;">)</span><span style="color: #b22222;">");</span>
 <span style="color: #b22222;">}</span>
 </pre>
 </div>
