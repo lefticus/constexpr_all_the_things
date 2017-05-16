@@ -60,6 +60,7 @@ Why JSON?
  - sufficiently interesting (deal with recursive structure at compile time
    without memory management)
  - ubiquitous, useful?
+ - a bellwether for what is possible with ~constepxr~
 #+END_NOTES
 
 * The Promise of ~constexpr~
@@ -97,7 +98,7 @@ Ben to drive this section.
 C++11 constexpr was "extreme recursion" but many things were doable nonetheless.
 
 Scott Schurr's talks at CppNow/CppCon hinted at things to come and expounded on
-the throw trick for forcing compile-time evaluation.
+the throw trick for forcing compile-time evaluation. (Explain)
 #+END_NOTES
 
 ** ~constexpr~: End of the First Age
@@ -1031,7 +1032,7 @@ as the parse result of the first argument.
 ** Some simple examples
 This (very simply) parses a string.
 #+BEGIN_SRC c++
-  constexpr auto string_parser()
+  constexpr auto string_parser(parse_input_t s)
   {
     constexpr auto quote_parser = make_char_parser('"');
     const auto str_parser =
@@ -1040,7 +1041,7 @@ This (very simply) parses a string.
            [] (const auto& acc, auto) {
              return std::string_view(acc.data(), acc.size()+1);
            });
-    return quote_parser < str_parser > quote_parser;
+    return (quote_parser < str_parser > quote_parser)(s);
   }
 #+END_SRC
 
