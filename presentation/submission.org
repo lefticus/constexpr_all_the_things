@@ -5,6 +5,8 @@ For submission: http://cppnow.org/submission/
 ** Jason Turner
 jason@emptycrate.com
 
+CppCast / C++ Weekly
+
 Jason is a C++ developer, trainer and speaker; host of C++Weekly
 https://www.youtube.com/c/JasonTurner-lefticus; co-host of CppCast
 http://cppcast.com; co-creator and maintainer of the embedded scripting language
@@ -17,6 +19,8 @@ in C++17".
 
 ** Ben Deane
 bdeane@blizzard.com
+
+Blizzard Entertainment
 
 Ben has been writing games for over 20 years, and in C++ for most of that. He is
 currently a Principal Engineer at Blizzard Entertainment where he works on the
@@ -59,12 +63,11 @@ power, in C++17 will it become an important tool in the programmer's toolkit?
 In this talk we will examine the possibilities and power of constexpr and
 explore what can (and what should) be done at compile-time with C++17. We'll
 present techniques for building constexpr data structures and algorithms, and
-for effectively meshing compile-time and runtime computation with constexpr API
-constructs. We'll also consider the opportunities for judicious use of user
-defined literals for expressive compile-time abstractions.
+look at what the standard provides and where it can improve. We'll also explore
+constexpr use of user defined literals for expressive compile-time abstractions.
 
 Compile-time computation offers perhaps the ultimate zero-cost abstraction, and
-this talk attempts to answer the question of how C++17 delivers on the promise.
+this talk attempts to gauge the power available with C++17 constexpr.
 
 
 * Session Material
@@ -74,36 +77,46 @@ Source Code
 
 * Outline
 
-** Building data structures
- - Strings
- - Pairs
- - Vectors
- - Maps
- - Standard lib possibilities & current shortcomings
- - Lambdas?
- - Cost analysis of building structures at compile time
+** Introduction
+ - brief constexpr history & evolution
+ - current constexpr concerns
+ - the goal: a constexpr JSON UDL
 
-** Algorithms
- - Non-mutating
- - Mutating
- - Other?
- - Standard lib possibilities & current shortcomings
- - More lambdas?
- - Algorithmic complexity at compile time
+** Representing JSON
+ - constexpr strings
+ - constexpr vectors
+ - constexpr maps
+ - algorithms and other STL shortcomings
+ - a constexpr JSON value
+ - constexpr allocator possibilities
 
-** Literals
- - Parsing techniques
- - Tuple & variant possiblities
- - (In development)
+** constexpr Parsing
+ - simple parse functions
+ - building parser combinators
+ - parsing JSON, first cut
 
-** Mixing compile-time and runtime
- - The limits of constexpr performance
- - constexpr detection and SFINAE techniques
+** Parsing Refinements
+ - more complex parsing
+ - multiple passes
+ - improving compile times
+ - removing storage and recursion limits
 
+** Conclusion & Future Directions
+ - constexpr constraints
+ - containers and iterators
+ - algorithms
+ - compile-time performance
 
 * Video URLs
 
 Ben Deane - Using Types Effectively CppCon2016 - https://www.youtube.com/watch?v=ojZbFIQSdl8
 Jason Turner - Rich Code For Tiny Computer CppCon2016 - https://www.youtube.com/watch?v=zBkNBP00wJE
 
+Ben Deane & Jason Turner - constexpr ALL the Things! C++Now 2017 - https://www.youtube.com/watch?v=HMB9oXFobJc
 
+* Comments for the Programming Committee
+
+This talk was 90 minutes at C++Now; to fit the 1h slot we will condense some of
+the front and end matter and concentrate on the techniques of building data
+structures and parsing. And in our experience, CppCon talks run more quickly
+than C++Now with typically less frequent audience interaction.
