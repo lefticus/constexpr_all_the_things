@@ -12,6 +12,15 @@ else()
   set(CXX_STD 1z)
 endif()
 
+# Use local libc++
+if($ENV{USE_LOCAL_LIBCXX})
+  message("Using local libc++ (assumed in /usr/local)")
+  add_compile_options(-nostdinc++)
+  add_compile_options(-I/usr/local/include/c++/v1)
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -lc++abi -L/usr/local/lib")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath,/usr/local/lib")
+endif()
+
 if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
   set(MY_CXX_FLAGS_LIST
     )
