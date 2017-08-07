@@ -27,7 +27,7 @@
 "<a href=\"http://twitter.com/ben_deane\">@ben_deane</a></h3>"
 "<h3>Jason Turner / <a href=\"mailto:jason@emptycrate.com\">jason@emptycrate.com</a> / "
 "<a href=\"http://twitter.com/lefticus\">@lefticus</a></h3>"
-"<h4>C++Now / Tuesday 16th May 2017</h4>"))
+"<h4>CppCon / Monday 25th September 2017</h4>"))
 #+END_SRC
 
 * Don't Bury The Lead
@@ -1401,7 +1401,7 @@ external storage yet, they are just offsets from the current.
   template <char... Cs>
   constexpr auto numobjects()
   {
-    std::initializer_list<char> il{Cs...};
+    const std::initializer_list<char> il{Cs...};
     return numobjects_recur<>::value_parser()(
         std::string_view(il.begin(), il.size()))->first;
   }
@@ -1409,7 +1409,7 @@ external storage yet, they are just offsets from the current.
   template <typename T, T... Ts>
   constexpr auto operator "" _json()
   {
-    constexpr std::initializer_list<T> il{Ts...};
+    const std::initializer_list<T> il{Ts...};
     return recur<numobjects<Ts...>()>(
         std::string_view(il.begin(), il.size())).vec;
   }
