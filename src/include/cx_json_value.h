@@ -25,11 +25,15 @@ namespace JSON
     union Data
     {
       std::string_view unparsed;
-      ExternalView external_object;
-      ExternalView external_array;
-      ExternalView external_string;
+      ExternalView external;
       double number;
       bool boolean;
+
+      constexpr Data() : boolean(false) {}
+      constexpr Data(const std::string_view& sv) : unparsed(sv) {}
+      constexpr Data(bool b) : boolean(b) {}
+      constexpr Data(double d) : number(d) {}
+      constexpr Data(const ExternalView& ev) : external(ev) {}
     };
 
     enum class Type
@@ -48,10 +52,9 @@ namespace JSON
 
     constexpr value() = default;
 
-    constexpr value(const std::string_view& extent) {
-      type = Type::Unparsed;
-      data.unparsed = extent;
-    }
+    constexpr value(const std::string_view& extent)
+      : type(Type::Unparsed), data(extent)
+    {}
 
     constexpr value(const double t_d) {
       to_Number() = t_d;
@@ -72,16 +75,16 @@ namespace JSON
     constexpr decltype(auto) to_Object() const
     {
       assert_type(Type::Object);
-      return (data.external_object);
+      return (data.external);
     }
 
     constexpr decltype(auto) to_Object()
     {
       if (type != Type::Object) {
         type = Type::Object;
-        data.external_object = {0,0};
+        data = Data(ExternalView{0,0});
       }
-      return (data.external_object);
+      return (data.external);
     }
 
     // objects are stored contiguously in storage as alternate string, value,
@@ -89,7 +92,7 @@ namespace JSON
     constexpr auto object_Size() const
     {
       assert_type(Type::Object);
-      return data.external_object.extent / 2;
+      return data.external.extent / 2;
     }
 
     constexpr void assert_type(Type t) const
@@ -104,7 +107,10 @@ namespace JSON
 
     constexpr void to_Null()
     {
-      type = Type::Null;
+      if (type != Type::Null) {
+        type = Type::Null;
+        data = Data{};
+      }
     }
 
     constexpr const std::string_view& to_Unparsed() const
@@ -117,7 +123,7 @@ namespace JSON
     {
       if (type != Type::Unparsed) {
         type = Type::Unparsed;
-        data.unparsed = {0,0};
+        data = Data(std::string_view{});
       }
       return data.unparsed;
     }
@@ -125,43 +131,43 @@ namespace JSON
     constexpr const ExternalView& to_Array() const
     {
       assert_type(Type::Array);
-      return data.external_array;
+      return data.external;
     }
 
     constexpr ExternalView& to_Array()
     {
       if (type != Type::Array) {
         type = Type::Array;
-        data.external_array = {0,0};
+        data = Data(ExternalView{0,0});
       }
-      return data.external_array;
+      return data.external;
     }
 
     constexpr auto array_Size() const
     {
       assert_type(Type::Array);
-      return data.external_array.extent;
+      return data.external.extent;
     }
 
     constexpr const ExternalView& to_String() const
     {
       assert_type(Type::String);
-      return data.external_string;
+      return data.external;
     }
 
     constexpr ExternalView& to_String()
     {
       if (type != Type::String) {
         type = Type::String;
-        data.external_string = {0,0};
+        data = Data(ExternalView{0,0});
       }
-      return data.external_string;
+      return data.external;
     }
 
     constexpr auto string_Size() const
     {
       assert_type(Type::String);
-      return data.external_string.extent;
+      return data.external.extent;
     }
 
     constexpr const double& to_Number() const
@@ -174,7 +180,7 @@ namespace JSON
     {
       if (type != Type::Number) {
         type = Type::Number;
-        data.number = 0.0;
+        data = Data(0.0);
       }
       return data.number;
     }
@@ -189,7 +195,7 @@ namespace JSON
     {
       if (type != Type::Boolean) {
         type = Type::Boolean;
-        data.boolean = false;
+        data = Data(false);
       }
       return data.boolean;
     }
@@ -224,9 +230,11 @@ namespace JSON
       }
     };
 
-    // the use of "notfound" in these functions serves no purpose; but if the
+    // The use of "notfound" in these functions serves no purpose; but if the
     // throw expression is not guarded, it is evaluated, even though the
-    // function returns early and it should be unevaluated...
+    // function returns early and it should be unevaluated. And the final return
+    // here is because clang complains about control flow reaching the end of
+    // this non-void function, although it never will.
     template <typename K,
               std::enable_if_t<!std::is_integral<K>::value, int> = 0>
     constexpr auto operator[](const K& s) const {
@@ -239,6 +247,7 @@ namespace JSON
           return value_proxy{i+1, object_storage, string_storage};
       }
       if (notfound) throw std::runtime_error("Key not found in object");
+      return value_proxy{0, object_storage, string_storage};
     }
     template <typename K,
               std::enable_if_t<!std::is_integral<K>::value, int> = 0>
@@ -252,6 +261,7 @@ namespace JSON
           return value_proxy{i+1, object_storage, string_storage};
       }
       if (notfound) throw std::runtime_error("Key not found in object");
+      return value_proxy{0, object_storage, string_storage};
     }
     constexpr auto object_Size() const {
       return object_storage[index].object_Size();

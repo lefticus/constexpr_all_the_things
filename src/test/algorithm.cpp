@@ -1,6 +1,8 @@
 #include <cx_algorithm.h>
 #include <cx_vector.h>
 
+#include <string_view>
+
 void algo_tests_nonmod()
 {
 

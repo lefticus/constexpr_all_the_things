@@ -288,9 +288,14 @@ namespace JSON
   template <std::size_t = 0>
   struct sizes_recur
   {
+    // Because the lambda returned from value_parser has no captures, it can
+    // decay to a function pointer. This helps clang deduce the return type of
+    // value_parser here.
+    using P = auto (*)(const parse_input_t&) -> parse_result_t<Sizes>;
+
     // parse a JSON value
 
-    static constexpr auto value_parser()
+    static constexpr auto value_parser() -> P
     {
       using namespace std::literals;
       return [] (const auto& sv) -> parse_result_t<Sizes> {
@@ -300,10 +305,10 @@ namespace JSON
                | make_string_parser("null"sv))
           | fmap([] (auto) { return Sizes{1, 0}; },
                  number_parser())
-        | fmap([] (std::size_t len) { return Sizes{1, len}; },
-               string_size_parser())
-        | array_parser()
-        | object_parser();
+          | fmap([] (std::size_t len) { return Sizes{1, len}; },
+                 string_size_parser())
+          | array_parser()
+          | object_parser();
         return (skip_whitespace() < p)(sv);
       };
     }
@@ -316,7 +321,7 @@ namespace JSON
         separated_by_val(value_parser(),
                          skip_whitespace() < make_char_parser(','),
                          Sizes{1, 0}, std::plus<>{})
-        > skip_whitespace()
+          > skip_whitespace()
         > (make_char_parser(']') | fail(']', [] { throw "expected ]"; }));
     }
 
@@ -367,9 +372,14 @@ namespace JSON
   template <std::size_t = 0>
   struct extent_recur
   {
+    // As with sizes_recur, the lambda returned from value_parser has no
+    // captures, so it can decay to a function pointer. This helps clang deduce
+    // the return type of value_parser here.
+    using P = auto (*)(const parse_input_t&) -> parse_result_t<std::string_view>;
+
     // parse a JSON value
 
-    static constexpr auto value_parser()
+    static constexpr auto value_parser() -> P
     {
       using namespace std::literals;
       using R = parse_result_t<std::string_view>;
@@ -436,6 +446,46 @@ namespace JSON
     using V = value[NObj];
     using S = cx::basic_string<char, NString>;
 
+    // Here, value_parser returns a lambda with captures, so it can't decay to a
+    // function pointer type. clang cannot deduce the return type of
+    // value_parser properly when it uses a lambda, but we can make our own
+    // "lambda object" and then it works...
+#ifdef __clang__
+    struct lambda
+    {
+      constexpr lambda(V& v_, S& s_, const std::size_t& idx_, const std::size_t& max_)
+        : v(v_), s(s_), idx(idx_), max(max_)
+      {}
+
+      constexpr auto operator()(const parse_input_t& sv) -> parse_result_t<std::size_t>
+      {
+        using namespace std::literals;
+        const auto p =
+          fmap([&v = v, idx = idx, max = max] (auto) { v[idx].to_Boolean() = true; return max; },
+               make_string_parser("true"sv))
+          | fmap([&v = v, idx = idx, max = max] (auto) { v[idx].to_Boolean() = false; return max; },
+                 make_string_parser("false"sv))
+          | fmap([&v = v, idx = idx, max = max] (auto) { v[idx].to_Null(); return max; },
+                 make_string_parser("null"sv))
+          | fmap([&v = v, idx = idx, max = max] (double d) { v[idx].to_Number() = d; return max; },
+                 number_parser())
+          | fmap([&v = v, idx = idx, max = max] (const value::ExternalView& ev) {
+                   v[idx].to_String() = ev;
+                   return max;
+                 }, string_parser(s))
+          | (make_char_parser('[') < array_parser(v, s, idx, max))
+          | (make_char_parser('{') < object_parser(v, s, idx, max))
+        ;
+        return (skip_whitespace() < p)(sv);
+      }
+
+      V& v;
+      S& s;
+      const std::size_t& idx;
+      const std::size_t& max;
+    };
+#endif // __clang__
+
     // parse a JSON value
 
     // note idx and max are const refs here because otherwise they are "not a
@@ -446,6 +496,9 @@ namespace JSON
                                        const std::size_t& idx,
                                        const std::size_t& max)
     {
+#ifdef __clang__
+      return lambda(v, s, idx, max);
+#else
       using namespace std::literals;
       return [&] (const auto& sv) -> parse_result_t<std::size_t> {
         const auto p =
@@ -466,6 +519,7 @@ namespace JSON
         ;
         return (skip_whitespace() < p)(sv);
       };
+#endif
     }
 
     // a string parser which accumulates its string into external storage - we
@@ -582,7 +636,7 @@ namespace JSON
   template <size_t NumObjects, size_t StringSize>
   struct value_wrapper
   {
-    constexpr value_wrapper(parse_input_t s)
+    constexpr void construct(parse_input_t s)
     {
       value_recur<NumObjects, StringSize>::value_parser(
           object_storage, string_storage, 0, 1)(s);
@@ -658,12 +712,13 @@ namespace JSON
     template <typename T, T... Ts>
     constexpr auto operator "" _json()
     {
-      std::initializer_list<T> il{Ts...};
+      const std::initializer_list<T> il{Ts...};
       // I tried using structured bindings here, but g++ says:
       // "error: decomposition declaration cannot be declared 'constexpr'"
       constexpr auto S = sizes<Ts...>();
-      return value_wrapper<S.num_objects, S.string_size>(
-          std::string_view(il.begin(), il.size()));
+      auto val = value_wrapper<S.num_objects, S.string_size>{};
+      val.construct(std::string_view(il.begin(), il.size()));
+      return val;
     }
 
   }
