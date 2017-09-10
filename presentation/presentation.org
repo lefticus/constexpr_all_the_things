@@ -15,7 +15,7 @@
 #+TITLE: constexpr ALL the things!
 #+AUTHOR: Ben Deane & Jason Turner
 #+EMAIL: bdeane@blizzard.com, jason@emptycrate.com
-#+DATE: May 16th, 2017
+#+DATE: September 25th, 2017
 
 #+REVEAL_HTML: <script type="text/javascript" src="./presentation.js"></script>
 
@@ -28,6 +28,7 @@
 "<h3>Jason Turner / <a href=\"mailto:jason@emptycrate.com\">jason@emptycrate.com</a> / "
 "<a href=\"http://twitter.com/lefticus\">@lefticus</a></h3>"
 "<h4>CppCon / Monday 25th September 2017</h4>"))
+(set-face-foreground 'font-lock-comment-face "dark green")
 #+END_SRC
 
 * Don't Bury The Lead
@@ -87,71 +88,31 @@ A Short, Incomplete (and Mostly Wrong?) History of ~constexpr~
 Ben to drive this section.
 #+END_NOTES
 
-** ~constexpr~: The First Age
+** Three ages of ~constexpr~
 #+ATTR_REVEAL: :frag (appear)
- - One (~return~) expression per function was allowed
- - ~constexpr~ math functions explored
- - ~throw~ link error trick discovered
- - Recursive ~constexpr~ FNV1 string hash discovered
+ - First age: C++11
+   - One (~return~) expression per function was allowed
+   - Recursion! math functions, FNV1 string hash, etc
+ - Second age: C++14
+   - Generalized ~constexpr~
+   - Murmur3 hash, ~constexpr~ libraries appearing
+ - Third age: C++17 and beyond
+   - ~if constexpr~ for metaprogramming
+   - ~constexpr~ lambdas, STL
+   - ~constexpr~ by default?
 
 #+BEGIN_NOTES
 C++11 constexpr was "extreme recursion" but many things were doable nonetheless.
-
 Scott Schurr's talks at CppNow/CppCon hinted at things to come and expounded on
 the throw trick for forcing compile-time evaluation. (Explain)
-#+END_NOTES
 
-** ~constexpr~: End of the First Age
-#+BEGIN_SRC c++
-// 1. Fall of Gondolin
-// 2. Balrogs destroyed
-// 3. Morgoth defeated and cast into the Timeless Void
-// 4. constexpr string hashing discovered
-
-constexpr uint64_t fnv1(uint64_t h, const char* s)
-{
-  return (*s == 0) ? h :
-    fnv1((h * 1099511628211ull) ^ static_cast<uint64_t>(*s), s+1);
-}
-#+END_SRC
-
-#+BEGIN_NOTES
-At this point most people are probably familiar with this or something like it.
-#+END_NOTES
-
-** ~constexpr~: The Second Age
-#+ATTR_REVEAL: :frag (appear)
- - Generalized ~constexpr~ supported by Visual C++
- - Compile-time computation/optimization popularized by [[https://www.youtube.com/playlist?list=PLs3KjaCtOwSZ2tbuV1hx8Xz-rFZTan2J1][/C++ Weekly/]] et al.
- - Generalized ~constexpr~ string hashing (e.g. Murmur3) discovered
- - ~constexpr~ libraries start to appear
-
-#+BEGIN_NOTES
 For some reason, the major application of ~constexpr~ reported in the mainstream
 seems to be string hashing.
-#+END_NOTES
 
-** ~constexpr~: End of the Second Age
-[[./cpp14_murmur.png]]
-
-(Also: Last Alliance of Elves & Men, Isildur takes up the hilt of Narsil\\
-and cuts the One Ring from Sauron's hand.)
-
-** ~constexpr~: The Third Age?
-#+ATTR_REVEAL: :frag (appear)
- - ~constexpr~ lambdas
- - ~if constexpr~
- - ~constexpr~ STL proliferation?
- - (coming soon, no doubt) ~constexpr~ cryptographic hashes
-
-#+BEGIN_NOTES
 ~constexpr~ lambdas are a really powerful thing (as we shall see).
-
 ~if constexpr~ replaces many ~std::enable_if~ uses, more.
-
 A selection of interesting ~constexpr~ things in the STL: ~string_view~,
 ~array~, almost all of ~chrono~.
-
 New STL features are born with ~constexpr~ (somewhat) in mind: ~optional~,
 ~variant~.
 #+END_NOTES
@@ -162,74 +123,11 @@ New STL features are born with ~constexpr~ (somewhat) in mind: ~optional~,
 
 The inability to use different runtime and compile time algorithms.
 
-** ~constexpr~ SFINAE?
-
-A partial solution, perhaps.
-
-#+BEGIN_SRC c++
-constexpr auto str_view = "Computers are useless."sv;
-constexpr auto cx_hash = fnv1(str_view);
-
-auto str = "They can only give you answers."s;
-auto rt_hash = fnv1(str);
-#+END_SRC
-
-We would /like/ the second call to ~fnv1~ to use an efficient runtime algorithm.
-
-** ~constexpr~ SFINAE?
-
-You /can/ do something like this...
-
-#+BEGIN_SRC c++
-template <typename T>
-using constexpr_construct_t = std::integral_constant<bool, (T{}, true)>;
-#+END_SRC
-
-And then feed it to the detection idiom.
+You *can* try to SFINAE on ~constexpr~, but it's messy and brittle. YMMV.
 
 #+BEGIN_NOTES
-If ~T~ is ~constexpr~ constructible, it will be admissible as a compile-time
-argument to the comma operator, and therefore the result will be a well-formed
-template argument.
-
-The use of the comma is similar to ~void_t~ here: we're turning any value into a
-boolean.
-
-Whatever expression we put in the arguement to comma will have to be evaluated
-at compile time in order for the type to be well-formed. And we can then use
-this type with the new detection idiom.
+We will come to proposals later.
 #+END_NOTES
-
-** ~constexpr~ SFINAE?
-
-#+BEGIN_SRC c++
-template <typename StringType>
-constexpr auto fnv1(const StringType& s)
-{
-  if constexpr(is_detected_v<constexpr_construct_t, StringType>) {
-    return cx::fnv1(s);
-  } else {
-    return runtime::fnv1(s);
-  }
-}
-#+END_SRC
-
-Caveats: many.
-#+ATTR_REVEAL: :frag (appear)
- - "~constexpr~ constructible" doesn't mean "~constexpr~ hashable"
- - "~constexpr~ capable" doesn't mean "in a ~constexpr~ context"
- - verbosity, compile time?
-
-#+BEGIN_NOTES
-If you're going to go with this kind of thing, you're practically going down the
-route of completely different types for use at compile time and runtime.
-#+END_NOTES
-
-** ~constexpr~ SFINAE?
-
-Another possible (better) solution.
-
-[[./constexpr_operator.png]]
 
 * Building ~constexpr~ JSON Values
 
@@ -259,7 +157,7 @@ A JSON Value is a discriminated union of:\\
  - number
  - string
  - array of values
- - object (map of string -> value)
+ - object (map of string → value)
 
 #+ATTR_REVEAL: :frag (appear)
 \\
@@ -371,9 +269,9 @@ statically sized vector.
 
 ** Why not ~std::next~?
 
-In GCC's implementation: internal ~__iterator_category~ is not ~constexpr~ constructible.
+In GCC 7.2's implementation: internal ~__iterator_category~ is not ~constexpr~ constructible.
 
-#+REVEAL_HTML: <iframe width="1400px" height="600px" src="https://gcc.godbolt.org/e#g:!((g:!((g:!((h:codeEditor,i:(fontScale:1.2899450879999999,j:1,source:'%23include+%3Carray%3E%0A%23include+%3Citerator%3E%0A%0Ausing+namespace+std%3B%0A%0Aconstexpr+array%3Cint,+5%3E+foo+%3D+%7B1,2,3,4,5%7D%3B%0A%0Aconstexpr+auto+third_of_foo()%0A%7B%0A++return+next(foo.cbegin(),+3)%3B%0A%7D%0A%0Aint+main()%0A%7B%0A++constexpr+auto+i+%3D+*third_of_foo()%3B%0A%7D%0A'),l:'5',n:'0',o:'C%2B%2B+source+%231',t:'0')),k:44.41586064715348,l:'4',n:'0',o:'',s:0,t:'0'),(g:!((g:!((h:compiler,i:(compiler:g7snapshot,filters:(b:'0',commentOnly:'0',directives:'0',intel:'0'),fontScale:1.5479341055999998,options:'-std%3Dc%2B%2B1z+-O3+-Wall+-Wextra',source:1),l:'5',n:'0',o:'x86-64+gcc+7+(snapshot)+(Editor+%231,+Compiler+%231)',t:'0')),k:43.26069218283827,l:'4',m:21.627408993576015,n:'0',o:'',s:0,t:'0'),(g:!((h:output,i:(compiler:1,editor:1),l:'5',n:'0',o:'%231+with+x86-64+gcc+7+(snapshot)',t:'0')),l:'4',m:78.37259100642399,n:'0',o:'',s:0,t:'0')),k:55.58413935284653,l:'3',n:'0',o:'',t:'0')),l:'2',n:'0',o:'',t:'0')),version:4"></iframe>
+#+REVEAL_HTML: <iframe width="1400px" height="600px" src="https://godbolt.org/g/4YBTN7"></iframe>
 
 ** ~constexpr~ vectors
 
@@ -463,10 +361,9 @@ class map
 
 Standard library definition does not have\\
 ~constexpr operator=~ for ~std::pair~\\
-\\
 This is the only aspect of ~std::pair~ that is not ~constexpr~
 
-#+REVEAL_HTML: <iframe width="1400px" height="600px" src="https://gcc.godbolt.org/e#g:!((g:!((g:!((h:codeEditor,i:(fontScale:1.2899450879999999,j:1,source:'%23include+%3Cutility%3E%0A%0Ausing+namespace+std%3B%0A%0Astruct+P+%0A%7B%0A++std::pair%3Cconst+char*,+int%3E+pr%3B%0A%7D%3B%0A%0Aconstexpr+auto+pair_test()%0A%7B%0A++P+p%3B%0A++p.pr+%3D+make_pair(%22taxicab%22,+1729)%3B%0A++return+p%3B%0A%7D%0A%0Aint+main()%0A%7B%0A++constexpr+auto+p+%3D+pair_test()%3B%0A%7D%0A'),l:'5',n:'0',o:'C%2B%2B+source+%231',t:'0')),k:44.41586064715348,l:'4',n:'0',o:'',s:0,t:'0'),(g:!((g:!((h:compiler,i:(compiler:g7snapshot,filters:(b:'0',commentOnly:'0',directives:'0',intel:'0'),fontScale:1.2899450879999999,options:'-std%3Dc%2B%2B1z+-O3+-Wall+-Wextra',source:1),l:'5',n:'0',o:'x86-64+gcc+7+(snapshot)+(Editor+%231,+Compiler+%231)',t:'0')),k:43.26069218283827,l:'4',m:19.48608137044968,n:'0',o:'',s:0,t:'0'),(g:!((h:output,i:(compiler:1,editor:1),l:'5',n:'0',o:'%231+with+x86-64+gcc+7+(snapshot)',t:'0')),l:'4',m:80.51391862955032,n:'0',o:'',s:0,t:'0')),k:55.58413935284653,l:'3',n:'0',o:'',t:'0')),l:'2',n:'0',o:'',t:'0')),version:4"></iframe>
+#+REVEAL_HTML: <iframe width="1400px" height="600px" src="https://godbolt.org/g/brM8Ec"></iframe>
 
 ** ~constexpr find_if~
 
@@ -490,6 +387,8 @@ There's no technical reason for many algorithms not to be ~constexpr~.
 ** Let's make them all ~constexpr~ already
 
 [[./bryce_tweet.png]]
+
+(Bryce said we can't have ~constexpr~ parallel algorithms, though. ;_;)
 
 ** Other algorithms we made ~constexpr~
 
@@ -706,9 +605,9 @@ using parser = auto (*)(string) -> list<pair<T, string>>;
 Of course, we don't really mean quite this...
 
 #+ATTR_REVEAL: :frag (appear)
- - ~string~ -> ~string_view~ (compile-time stringlike thing)
- - ~list~ -> ~optional~ (simpler)
- - "function" -> "something invocable"
+ - ~string~ ⇒ ~string_view~ (compile-time stringlike thing)
+ - ~list~ ⇒ ~optional~ (simpler)
+ - "function" ⇒ "something invocable"
 
 #+BEGIN_NOTES
 Strings are any stringlike thing - ~string_view~ will do nicely since we're just
@@ -1316,9 +1215,9 @@ literal with our actual value parser, outputting into the array.
 ** Number-of-values Parser
 We can write a parser that computes the number of values in a literal:
 
- - Array -> 1 + number of values in children
- - Object -> 1 + number of values in children
- - Everything else -> 1
+ - Array ⇒ 1 + number of values in children
+ - Object ⇒ 1 + number of values in children
+ - Everything else ⇒ 1
 
 We can reuse some structural components of our value parser, and a
 number-of-values parser is simpler in many places.
@@ -1624,7 +1523,7 @@ scheme.
  - adding extra passes can solve almost any problem...
  - could parsing be helped by a (good?) C++ concept?
 
-* The Future
+* The Future: Problems and Proposals
 
 #+BEGIN_NOTES
 Jason to talk through this section.
@@ -1773,7 +1672,14 @@ In building the data structure, switching to runtime context was useful.
 In building up parsers, it was mostly simplify expressions and puzzle over the types.
 #+END_NOTES
 
-** The debugging problem
+** A ~constexpr~ operator
+
+This proposal solves the problem of "how do I know when I'm in a ~constexpr~
+context".
+
+[[./constexpr_operator.png]]
+
+** ~constexpr_trace~
 
 This proposal adds debugging capability at compile time.
 
@@ -1790,8 +1696,13 @@ that is allowed to grow and shrink at compile time only, requiring compiler supp
 
 [[./constexpr_vector.png]]
 
-* ~constexpr~ STL possibilities
-** algorithms
+** ~constexpr~ allocator support
+
+[[http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/p0639r0.html][Changing attack vector of the ~constexpr_vector~]] (P0639)
+
+Antony Polukhin & Alexander Zaitsev
+
+** STL possibilities: algorithms
 \\
 Weakened complexity guarantees on ~stable_sort~, ~inplace_merge~, ~stable_partition~?
 (They make use of temporary buffers to improve complexity.)\\
@@ -1804,7 +1715,7 @@ The temporary buffers aren't required for the algorithms to be correct, merely
 to make them efficient.
 #+END_NOTES
 
-** iterators
+** STL possibilities: iterators
 If you have a ~constexpr~ container, you want the iterators to all be ~constexpr~.
 
 Many iterators could be ~constexpr~ and usable in a ~constexpr~ context\\
@@ -1812,6 +1723,23 @@ if the operations on the corresponding containers are.
 
 e.g. if you have ~constexpr push_back~ on your ~constexpr vector~ type,\\
 ~back_insert_iterator~ could easily be ~constexpr~.
+
+** Things that could (should) be ~constexpr~
+
+#+ATTR_REVEAL: :frag (appear)
+ - ~std::swap~ & ~std::exchange~
+ - ~std::pair~'s ~operator=~
+ - ~std::back_insert_iterator~
+ - structured bindings
+ - ... ALL the things!
+
+** Implementation issues
+
+It is clear that standard library implementations need extensive ~constexpr~
+tests.
+
+ - ~std::string_view~'s ~operator=~
+ - iterator issues
 
 * The Cost
 ** Cognitive Cost
@@ -1878,13 +1806,20 @@ Slow build times are not unknown to the STL today.
 * Conclusion
 
 #+ATTR_REVEAL: :frag (appear)
- * All but 3 standard algorithms can (easily?) be made ~constexpr~
- * There are holes around assignment operations in the STL
+ * All +but 3+ standard algorithms can (easily?) be made ~constexpr~
+ * Standard libraries need ~constexpr~ testing to catch issues
  * Many iterator operations could be made ~constexpr~ for use with ~constexpr~ containers
  * Some interaction with C, ie ~<cmath>~ may hold back some operations
  * ~constexpr~ lambdas unlock the potential for complex UDLs
  * ~constexpr~ allocators and ~constexpr~ destructors would make it possible to unify ~constexpr~ containers with regular ones
 
-#+ATTR_REVEAL: :frag appear
-Thanks!\\
-https://github.com/lefticus/constexpr_all_the_things
+#+REVEAL_HTML: <p class="fragment appear">
+#+REVEAL_HTML: Thanks!<br/>
+#+REVEAL_HTML: <a href="http://twitter.com/ben_deane">@ben_deane</a> <a href="http://twitter.com/lefticus">@lefticus</a> <br/>
+#+REVEAL_HTML: <a href="https://github.com/lefticus/constexpr_all_the_things">https://github.com/lefticus/constexpr_all_the_things</a>
+#+REVEAL_HTML: </p>
+
+* Notes                                                            :noexport:
+
+Add Jason's list of things that should be constexpr
+New timings for the cost section

@@ -39,9 +39,9 @@ namespace cx
     constexpr auto begin() const { return m_data.begin(); }
     constexpr auto begin() { return m_data.begin(); }
 
-    // We would have prefered to use `std::next`, however it does not seem
-    // to be enabled for constexpr use for std::array in this version
-    // of gcc. TODO: reevaluate this
+    // We would have prefered to use `std::next`, however it does not seem to be
+    // enabled for constexpr use for std::array in this version of gcc. As of
+    // September 2017 this is fixed in GCC trunk but not in GCC 7.2.
     constexpr auto end() const { return m_data.begin() + m_size; }
     constexpr auto end() { return m_data.begin() + m_size; }
 
