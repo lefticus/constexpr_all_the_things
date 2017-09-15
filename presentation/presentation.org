@@ -1730,6 +1730,8 @@ e.g. if you have ~constexpr push_back~ on your ~constexpr vector~ type,\\
  - ~std::swap~ & ~std::exchange~
  - ~std::pair~'s ~operator=~
  - ~std::back_insert_iterator~
+ * ~std::array::fill~
+ * ~std::reference_wrapper~
  - structured bindings
  - ... ALL the things!
 
