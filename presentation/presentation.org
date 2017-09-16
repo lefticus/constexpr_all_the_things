@@ -352,8 +352,8 @@ class map
 
   int main() {
     constexpr auto colors = get_colors();
-    colors["red"]; // returns 0xFF0000
-    colors["blue"]; // compile-time error
+    constexpr auto r = colors["red"]; // returns 0xFF0000
+    constexpr auto b = colors["blue"]; // compile-time error
   }
 #+END_SRC
 
@@ -651,7 +651,7 @@ parsers.
 
 ** A Simple Parser
 #+BEGIN_SRC c++
-// Ceci n'est pas une parser.
+// Ceci n'est pas un parser.
 constexpr auto match_char(parse_input_t s, char c) -> parse_result_t<char>;
 #+END_SRC
 
@@ -680,6 +680,10 @@ constexpr auto make_char_parser(char c)
 #+END_SRC
 The lambda returned from ~make_char_parser~ is a parser that will match the
 given ~char~.
+
+#+BEGIN_NOTES
+Note that the lambda signature does NOT have to say constexpr: it's implicit.
+#+END_NOTES
 
 ** More useful primitive parsers
 So far we can match one ~char~. Because fundamentally parsing works on
@@ -1728,10 +1732,11 @@ e.g. if you have ~constexpr push_back~ on your ~constexpr vector~ type,\\
 
 #+ATTR_REVEAL: :frag (appear)
  - ~std::swap~ & ~std::exchange~
- - ~std::pair~'s ~operator=~
+ - ~std::pair~'s (and ~std::tuple~'s) ~operator=~
  - ~std::back_insert_iterator~
  * ~std::array::fill~
  * ~std::reference_wrapper~
+ - ~std::initializer_list~
  - structured bindings
  - ... ALL the things!
 
@@ -1811,7 +1816,7 @@ Slow build times are not unknown to the STL today.
  * All +but 3+ standard algorithms can (easily?) be made ~constexpr~
  * Standard libraries need ~constexpr~ testing to catch issues
  * Many iterator operations could be made ~constexpr~ for use with ~constexpr~ containers
- * Some interaction with C, ie ~<cmath>~ may hold back some operations
+ * Some interaction with C, e.g. ~<cmath>~ may hold back some operations
  * ~constexpr~ lambdas unlock the potential for complex UDLs
  * ~constexpr~ allocators and ~constexpr~ destructors would make it possible to unify ~constexpr~ containers with regular ones
 
