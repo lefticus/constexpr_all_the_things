@@ -31,7 +31,7 @@
 (set-face-foreground 'font-lock-comment-face "dark green")
 #+END_SRC
 
-* Don't Bury The Lead
+* The Goal
 
 We want to do this:
 
@@ -1071,7 +1071,7 @@ template value to produce the next level of the JSON tree.
 Note the use of ~fail~: an easy way to provide the right type for the base case.
 #+END_NOTES
 
-** Error messages
+** Error messages                                                 :noexport:
 #+BEGIN_SRC c++
   template <typename T, typename ErrorFn>
   constexpr auto fail(T, ErrorFn f) {
@@ -1527,6 +1527,10 @@ scheme.
  - adding extra passes can solve almost any problem...
  - could parsing be helped by a (good?) C++ concept?
 
+** Demo?
+
+Here's one I prepared earlier...
+
 * The Future: Problems and Proposals
 
 #+BEGIN_NOTES
@@ -1746,6 +1750,7 @@ It is clear that standard library implementations need extensive ~constexpr~
 tests.
 
  - ~std::string_view~'s ~operator=~
+ - also ~remove_prefix~, ~remove_suffix~
  - iterator issues
 
 * The Cost
