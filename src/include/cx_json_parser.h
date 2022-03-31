@@ -50,19 +50,23 @@ namespace JSON
               fmap([] (char) { return 0; }, make_char_parser('0')) | int1_parser(),
               [] (char sign, int i) { return sign == '+' ? i : -i; });
 
-    constexpr auto frac_parser = make_char_parser('.') < int0_parser();
-
-    constexpr auto mantissa_parser = combine(
-        integral_parser, option(0, frac_parser),
-        [] (int i, int f) -> double {
+    constexpr auto frac_parser = make_char_parser('.') < combine(
+        many(make_char_parser('0'), 0, [](int acc, auto) -> int { return acc+1; }), // count the number of leading zeros
+        int1_parser(),
+        [](int exp, int f) -> double {
           double d = 0;
           while (f > 0) {
             d += f % 10;
             d /= 10;
             f /= 10;
           }
-          return i + d;
+          while (exp--) {
+            d /= 10;
+          }
+          return d;
         });
+
+    constexpr auto mantissa_parser = combine(integral_parser, option(0.0, frac_parser), std::plus{});
 
     constexpr auto e_parser = make_char_parser('e') | make_char_parser('E');
     constexpr auto sign_parser = make_char_parser('+') | neg_parser;

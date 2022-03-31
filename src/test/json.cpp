@@ -99,6 +99,11 @@ void number_parse_tests()
     constexpr auto number_val = JSON::number_parser()("456.123e-1"sv);
     static_assert(number_val && number_val->first == 456.123e-1);
   }
+
+  {
+    constexpr auto number_val = JSON::number_parser()("0.0625"sv);
+    static_assert(number_val && number_val->first == 0.0625);
+  }
 }
 
 void numobjects_tests()
